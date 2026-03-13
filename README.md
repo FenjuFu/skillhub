@@ -287,7 +287,7 @@ openclaw search <keyword>
 openclaw install <namespace>/<skill>
 ```
 
-### [讯飞 AstronClaw](https://agent.xfyun.cn/astron-claw)
+### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
 [AstronClaw](https://agent.xfyun.cn/astron-claw) is the skill marketplace provided by iFlytek's Astron platform. You can connect it to a self-hosted SkillHub registry to manage and distribute private skills within your organization, or browse publicly shared skills on the Astron platform.
 
