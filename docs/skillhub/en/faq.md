@@ -246,6 +246,79 @@ docker image inspect ghcr.io/iflytek/skillhub-server:latest --format '{{index .C
 - Check the CLI version: `skillhub version`.
 - For customization (e.g. changing the logo), it is recommended to fork the latest code, modify it, and build your own Docker image.
 
+## Q: The page loads, but the login / register APIs return 502?
+
+A: The page is served by the `web` container, while login, register and other APIs are proxied by `web` to `server` (default `SKILLHUB_API_UPSTREAM=http://server:8080`). When the page works but the API returns 502, check whether `server` started correctly first; a wrong upstream, DNS, or container-network problem can also produce a 502.
+
+Troubleshooting order:
+
+```bash
+# 1. Check whether server is running
+docker compose --env-file .env.release -f compose.release.yml ps
+
+# 2. Look at the first error in the server startup log
+docker compose --env-file .env.release -f compose.release.yml logs server | head -50
+```
+
+One common startup failure is:
+
+```
+SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET must not use the default placeholder
+```
+
+This means `server` still reads the placeholder from the template. Replace it in `.env.release` with your own random string (**at least 32 characters**) and recreate the containers:
+
+```bash
+SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET=<your own random string, at least 32 characters>
+```
+
+Running `make validate-release-config` before startup validates `.env.release` and surfaces placeholders and missing values early.
+
+## Q: Why doesn't my configuration change take effect?
+
+A: Two common causes:
+
+1. **Edited the wrong file**: `.env.release.example` is only a template; Compose reads the file passed via `--env-file`, i.e. `.env.release`. Run `cp .env.release.example .env.release` first, then edit `.env.release`.
+2. **Restarted instead of recreated**: environment variables are injected when the container is created, and `restart` does not re-inject them. Recreate the containers after a config change:
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml up -d --force-recreate
+```
+
+## Q: What external dependencies does SkillHub require at runtime?
+
+A: PostgreSQL and Redis are required. Object storage supports both `local` and S3, controlled by `SKILLHUB_STORAGE_PROVIDER`, which defaults to `local`; S3 is recommended for production (configured via `SKILLHUB_STORAGE_S3_*`). Only PostgreSQL is supported as the database — MySQL is not.
+
+The release Compose file already bundles PostgreSQL and Redis, bound to `127.0.0.1` by default.
+
+## Q: How does an account created through OAuth (GitHub / GitLab, etc.) get admin rights?
+
+A: The first OAuth login creates a regular user. An existing `SUPER_ADMIN` (for example the bootstrap admin created during initialization) has to promote it from the admin console.
+
+Note that `USER_ADMIN` can only manage regular users and **cannot** grant the `SUPER_ADMIN` role; only a `SUPER_ADMIN` can grant `SUPER_ADMIN`.
+
+## Q: How do I install multiple skills in bulk?
+
+A: The CLI `install` command handles one skill at a time; use a shell loop for bulk installs:
+
+```bash
+# install one by one
+for skill in skill-a skill-b skill-c; do
+  skillhub install "$skill"
+done
+
+# or read from a manifest file (one skill name per line)
+xargs -a skills.txt -n 1 skillhub install
+```
+
+`install` also accepts `--dir` to choose the installation directory, which helps when scripting deployments in an isolated network:
+
+```bash
+skillhub install <skill-slug> --dir <target-path>
+```
+
+Since **SkillHub Server v0.2.12**, public skills support anonymous search and install. Note that an invalid bearer token now fails the command instead of falling back to anonymous access — update or remove the stale credential in that case.
+
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:
