@@ -307,7 +307,7 @@ A `USER_ADMIN` can manage user status and assign platform roles other than `SUPE
 
 ## Q: How do I install multiple skills in bulk?
 
-A: The CLI `install` command handles one skill at a time. Both examples below use `--dir` to install the skills into the same target directory:
+A: The CLI `install` command handles one skill at a time. Both examples below use `--dir` to install the skills under the same target root; each skill is placed in `$target_dir/<skill-slug>/`:
 
 ```bash
 target_dir=/opt/skillhub-skills

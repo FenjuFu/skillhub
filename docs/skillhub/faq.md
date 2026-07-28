@@ -307,7 +307,7 @@ A: OAuth 首次登录创建的是普通用户。需要由已有的 `SUPER_ADMIN`
 
 ## Q: 如何批量安装多个技能包？
 
-A: CLI 的 `install` 一次处理一个技能包。下面两个示例都通过 `--dir` 将技能批量安装到同一个目标目录：
+A: CLI 的 `install` 一次处理一个技能包。下面两个示例都通过 `--dir` 将技能批量安装到同一个目标根目录；每个技能实际位于 `$target_dir/<skill-slug>/`：
 
 ```bash
 target_dir=/opt/skillhub-skills
