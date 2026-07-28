@@ -156,10 +156,18 @@ A: This is most commonly seen with **manual deployment** (caused by API errors o
 
 ## Q: How do I change the admin password? Why don't my config changes take effect?
 
-A: Environment variables are read at container startup, so you must restart the containers after changing them.
+A: Environment variables are injected when a container is created, so you must recreate the containers after changing them; `restart` alone does not re-inject environment variables.
 
 1. Edit `/tmp/skillhub-runtime/.env.release` in the runtime directory (refer to [.env.release.example](https://github.com/iflytek/skillhub/blob/main/.env.release.example)).
-2. Restart the relevant containers.
+2. Recreate the relevant containers:
+
+   ```bash
+   docker compose \
+     --env-file /tmp/skillhub-runtime/.env.release \
+     -f /tmp/skillhub-runtime/compose.release.yml \
+     up -d --force-recreate
+   ```
+
 3. If the password was already persisted to the database and the change still doesn't take effect, you may need to clear the corresponding data and re-initialize.
 
 ## Q: Is an email verification code required to change / reset a password?
@@ -287,7 +295,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d --force-recr
 
 ## Q: What external dependencies does SkillHub require at runtime?
 
-A: PostgreSQL and Redis are required. Object storage supports both `local` and S3, controlled by `SKILLHUB_STORAGE_PROVIDER`, which defaults to `local`; S3 is recommended for production (configured via `SKILLHUB_STORAGE_S3_*`). Only PostgreSQL is supported as the database — MySQL is not.
+A: PostgreSQL and Redis are required. Object storage supports both `local` and S3, controlled by `SKILLHUB_STORAGE_PROVIDER`. `.env.release.example` explicitly selects `local`, but if the variable is completely unset when using `compose.release.yml`, the Compose fallback is `s3`. Set it explicitly; S3 is recommended for production (configured via `SKILLHUB_STORAGE_S3_*`). Only PostgreSQL is supported as the database — MySQL is not.
 
 The release Compose file already bundles PostgreSQL and Redis, bound to `127.0.0.1` by default.
 
@@ -295,26 +303,22 @@ The release Compose file already bundles PostgreSQL and Redis, bound to `127.0.0
 
 A: The first OAuth login creates a regular user. An existing `SUPER_ADMIN` (for example the bootstrap admin created during initialization) has to promote it from the admin console.
 
-Note that `USER_ADMIN` can only manage regular users and **cannot** grant the `SUPER_ADMIN` role; only a `SUPER_ADMIN` can grant `SUPER_ADMIN`.
+A `USER_ADMIN` can manage user status and assign platform roles other than `SUPER_ADMIN`, but cannot grant `SUPER_ADMIN` to any account or change the role of an existing `SUPER_ADMIN`. Only a `SUPER_ADMIN` can perform those two operations.
 
 ## Q: How do I install multiple skills in bulk?
 
-A: The CLI `install` command handles one skill at a time; use a shell loop for bulk installs:
+A: The CLI `install` command handles one skill at a time. Both examples below use `--dir` to install the skills into the same target directory:
 
 ```bash
+target_dir=/opt/skillhub-skills
+
 # install one by one
 for skill in skill-a skill-b skill-c; do
-  skillhub install "$skill"
+  skillhub install "$skill" --dir "$target_dir"
 done
 
 # or read from a manifest file (one skill name per line)
-xargs -a skills.txt -n 1 skillhub install
-```
-
-`install` also accepts `--dir` to choose the installation directory, which helps when scripting deployments in an isolated network:
-
-```bash
-skillhub install <skill-slug> --dir <target-path>
+xargs -a skills.txt -I {} skillhub install "{}" --dir "$target_dir"
 ```
 
 Since **SkillHub Server v0.2.12**, public skills support anonymous search and install. Note that an invalid bearer token now fails the command instead of falling back to anonymous access — update or remove the stale credential in that case.

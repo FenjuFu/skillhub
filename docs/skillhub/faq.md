@@ -156,10 +156,18 @@ A: 该现象多见于「手动部署」场景（接口异常或初始化未完�
 
 ## Q: 如何修改 admin 密码？修改配置后不生效？
 
-A: 环境变量在容器启动时读取，修改后必须重启容器才会生效。
+A: 环境变量在容器创建时注入，修改后必须重新创建容器才会生效；仅执行 `restart` 不会重新注入环境变量。
 
 1. 修改运行时目录下的 `/tmp/skillhub-runtime/.env.release`（参考仓库 [.env.release.example](https://github.com/iflytek/skillhub/blob/main/.env.release.example)）。
-2. 重启相关容器。
+2. 重新创建相关容器：
+
+   ```bash
+   docker compose \
+     --env-file /tmp/skillhub-runtime/.env.release \
+     -f /tmp/skillhub-runtime/compose.release.yml \
+     up -d --force-recreate
+   ```
+
 3. 若此前密码已写入数据库导致仍不生效，可能需要清理对应数据后重新初始化。
 
 ## Q: 修改 / 找回密码必须使用邮箱验证码吗？
@@ -287,7 +295,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d --force-recr
 
 ## Q: SkillHub 运行时需要哪些外部依赖？
 
-A: 必需 PostgreSQL 和 Redis；对象存储支持 `local` 与 S3 两种模式，由 `SKILLHUB_STORAGE_PROVIDER` 控制，默认为 `local`，生产环境推荐使用 S3（通过 `SKILLHUB_STORAGE_S3_*` 配置）。数据库仅支持 PostgreSQL，暂不支持 MySQL。
+A: 必需 PostgreSQL 和 Redis；对象存储支持 `local` 与 S3 两种模式，由 `SKILLHUB_STORAGE_PROVIDER` 控制。`.env.release.example` 显式配置为 `local`，但如果使用 `compose.release.yml` 时完全没有设置该变量，Compose 的回退值是 `s3`。建议始终显式设置；生产环境推荐使用 S3（通过 `SKILLHUB_STORAGE_S3_*` 配置）。数据库仅支持 PostgreSQL，暂不支持 MySQL。
 
 发布版 Compose 已内置 PostgreSQL 与 Redis，默认只绑定在 `127.0.0.1`。
 
@@ -295,26 +303,22 @@ A: 必需 PostgreSQL 和 Redis；对象存储支持 `local` 与 S3 两种模式�
 
 A: OAuth 首次登录创建的是普通用户。需要由已有的 `SUPER_ADMIN`（例如初始化时的 bootstrap admin）在后台将其提升为管理员。
 
-注意：`USER_ADMIN` 只能管理普通用户，**不能**授予 `SUPER_ADMIN` 角色；只有 `SUPER_ADMIN` 能授予 `SUPER_ADMIN`。
+`USER_ADMIN` 可以管理用户状态，并分配除 `SUPER_ADMIN` 之外的平台角色；但不能向任何账号授予 `SUPER_ADMIN`，也不能修改已有 `SUPER_ADMIN` 账号的角色。这两类操作只有 `SUPER_ADMIN` 可以执行。
 
 ## Q: 如何批量安装多个技能包？
 
-A: CLI 的 `install` 一次处理一个技能包，批量安装用 shell 循环即可：
+A: CLI 的 `install` 一次处理一个技能包。下面两个示例都通过 `--dir` 将技能批量安装到同一个目标目录：
 
 ```bash
+target_dir=/opt/skillhub-skills
+
 # 逐个安装
 for skill in skill-a skill-b skill-c; do
-  skillhub install "$skill"
+  skillhub install "$skill" --dir "$target_dir"
 done
 
 # 或从清单文件读取（每行一个技能名）
-xargs -a skills.txt -n 1 skillhub install
-```
-
-`install` 也支持 `--dir` 指定安装目录，便于在内网环境中脚本化部署：
-
-```bash
-skillhub install <skill-slug> --dir <target-path>
+xargs -a skills.txt -I {} skillhub install "{}" --dir "$target_dir"
 ```
 
 自 **SkillHub Server v0.2.12** 起，公开技能支持匿名搜索与安装；如果配置了无效的 Bearer Token，命令会直接失败而不再回退匿名访问，遇到这种情况请更新凭据或先移除无效 Token。
