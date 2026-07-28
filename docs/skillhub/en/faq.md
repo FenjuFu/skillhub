@@ -227,7 +227,7 @@ A: The default limit is **100 files** (this is separate from the 100MB size limi
 SKILLHUB_PUBLISH_MAX_FILE_COUNT=500
 ```
 
-Restart the containers for the change to take effect. Note that `compose.release.yml` must also reference this variable; older versions (e.g. v0.2.6) may hard-code the value, so upgrading to the latest version is recommended.
+Recreate the containers for the change to take effect; `restart` alone does not re-inject environment variables. Note that `compose.release.yml` must also reference this variable; older versions (e.g. v0.2.6) may hard-code the value, so upgrading to the latest version is recommended.
 
 ## Q: Is there a server version requirement for using the CLI (publish / download, etc.)?
 
