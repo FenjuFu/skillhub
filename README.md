@@ -376,6 +376,44 @@ Run it against a local backend:
 - OpenAPI TypeScript for type-safe API client
 - i18next for internationalization
 
+## SkillHub and the Agent Skills Ecosystem
+
+SkillHub is a **registry and governance platform** — not a skill collection.
+It is complementary to open skill catalogs such as
+[`anthropics/skills`](https://github.com/anthropics/skills): that repository
+popularized the **Agent Skill format** (a `SKILL.md` with `name` / `description`
+frontmatter plus supporting files) and ships a curated set of example skills.
+SkillHub is where your organization **hosts, versions, governs, and distributes**
+those skills privately.
+
+|  | [`anthropics/skills`](https://github.com/anthropics/skills) | **SkillHub** |
+|---|---|---|
+| What it is | A curated collection of example Agent Skills + the format spec | A self-hosted registry & governance platform for skills |
+| Layer | Content — the skills themselves | Infrastructure — hosting, versioning, discovery, access control |
+| Hosting | Public GitHub repository | Your own infrastructure, behind your firewall |
+| Versioning | Git history | Semantic versions, tags (`beta` / `stable`), `latest` tracking |
+| Access control | Public | Namespaces, RBAC, review & audit logging |
+| Distribution | Clone / copy files | Full-text search + CLI install |
+
+Because SkillHub speaks the same `SKILL.md` format, skills from `anthropics/skills`
+— or any Agent Skill folder — publish straight into your registry:
+
+```bash
+# Grab a skill from an open collection...
+git clone https://github.com/anthropics/skills
+
+# ...and publish it into your private SkillHub registry
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
+npx clawhub publish ./skills/<category>/<skill-name>
+```
+
+> ⚖️ **Licensing**: honor each skill's own license when republishing. Most skills in
+> `anthropics/skills` are Apache 2.0, but the document skills (DOCX/PDF/PPTX/XLSX) are
+> source-available rather than open source — check the skill's `LICENSE` before redistributing.
+
+**In short: use collections like `anthropics/skills` for content, and SkillHub to
+distribute it across your organization under governance.**
+
 ## Usage with Agent Platforms
 
 SkillHub works as a skill registry backend for several agent platforms. Point any of the clients below at your SkillHub instance to publish, discover, and install skills.

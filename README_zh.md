@@ -311,6 +311,41 @@ SkillHub 采用清晰的分层架构：
 
 完整路线图请参阅 [`docs/10-delivery-roadmap.md`](./docs/10-delivery-roadmap.md)。
 
+## SkillHub 与 Agent Skills 生态
+
+SkillHub 是一个**注册与治理平台**，而不是一个技能集合。它与
+[`anthropics/skills`](https://github.com/anthropics/skills) 这类开放技能仓库是
+**互补关系**：那个仓库推广了 **Agent Skill 格式**（带 `name` / `description`
+frontmatter 的 `SKILL.md` 加上配套文件），并提供了一批精选的示例技能；而 SkillHub
+则是你的组织**私有地托管、版本化、治理和分发**这些技能的地方。
+
+|  | [`anthropics/skills`](https://github.com/anthropics/skills) | **SkillHub** |
+|---|---|---|
+| 定位 | 精选的示例 Agent Skills 集合 + 格式规范 | 自托管的技能注册与治理平台 |
+| 层次 | 内容层 —— 技能本身 | 基础设施层 —— 托管、版本、发现、访问控制 |
+| 托管 | 公开的 GitHub 仓库 | 你自己的基础设施，部署在防火墙之内 |
+| 版本 | Git 提交历史 | 语义化版本、标签（`beta` / `stable`）、`latest` 追踪 |
+| 访问控制 | 公开 | 命名空间、RBAC、审核与审计日志 |
+| 分发 | 克隆 / 拷贝文件 | 全文搜索 + CLI 安装 |
+
+由于 SkillHub 使用同一套 `SKILL.md` 格式，`anthropics/skills` 中的技能——或任何
+Agent Skill 目录——都可以直接发布到你的注册中心：
+
+```bash
+# 从开放集合中获取一个技能……
+git clone https://github.com/anthropics/skills
+
+# ……并将其发布到你的私有 SkillHub 注册中心
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
+npx clawhub publish ./skills/<分类>/<技能名>
+```
+
+> ⚖️ **许可提示**：转发布时请遵守每个技能各自的许可证。`anthropics/skills` 中大多数技能
+> 采用 Apache 2.0，但文档类技能（DOCX/PDF/PPTX/XLSX）是 source-available 而非开源，
+> 再分发前请先查看该技能的 `LICENSE`。
+
+**一句话总结：用 `anthropics/skills` 这类集合提供内容，用 SkillHub 在组织内进行受治理的分发。**
+
 ## 与智能体平台集成
 
 SkillHub 设计为与各种智能体平台和框架无缝集成。
