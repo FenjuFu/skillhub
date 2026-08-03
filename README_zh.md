@@ -351,6 +351,13 @@ npx clawhub publish ./my-skill
 
 [astron-agent](https://github.com/iflytek/astron-agent) 是科大讯飞星火智能体框架。存储在 SkillHub 中的技能可以被 astron-agent 引用和加载，实现从开发到生产的受治理、版本化的技能生命周期。
 
+## 相关项目
+
+SkillHub 是 **[讯飞 Astron](https://github.com/iflytek)** 开源生态的一部分。如果 SkillHub 对你有帮助，这些同生态的姊妹项目你可能也会用到：
+
+- **[astron-agent](https://github.com/iflytek/astron-agent)** — 企业级、商业友好的智能体工作流平台，用于构建新一代 SuperAgent；发布到 SkillHub 的技能可被 astron-agent 加载和运行。
+- **[astron-rpa](https://github.com/iflytek/astron-rpa)** — 开箱即用、面向 Agent 的 RPA 套件，为个人与企业提供自动化工具。
+
 ---
 
 > 🌟 **展示与分享** — 您使用 SkillHub 构建了什么？我们很想听听！

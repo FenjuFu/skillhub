@@ -416,6 +416,13 @@ npx clawhub publish ./my-skill
 
 [astron-agent](https://github.com/iflytek/astron-agent) is the iFlytek Astron agent framework. Skills stored in SkillHub can be referenced and loaded by astron-agent, enabling a governed, versioned skill lifecycle from development to production.
 
+## Related Projects
+
+SkillHub is part of the **[iFlytek Astron](https://github.com/iflytek)** open-source ecosystem. If SkillHub is useful to you, these sibling projects may be too:
+
+- **[astron-agent](https://github.com/iflytek/astron-agent)** — Enterprise-grade, commercial-friendly agentic workflow platform for building next-generation SuperAgents. Skills published to SkillHub can be loaded and run by astron-agent.
+- **[astron-rpa](https://github.com/iflytek/astron-rpa)** — Agent-ready RPA suite with out-of-the-box automation tools, built for individuals and enterprises.
+
 ---
 
 > 🌟 **Show & Tell** — Have you built something with SkillHub? We'd love to hear about it!
