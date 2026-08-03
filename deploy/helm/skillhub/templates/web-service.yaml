@@ -1,0 +1,17 @@
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skillhub.web.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "skillhub.web.fullname" . }}
+    {{- include "skillhub.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "skillhub.web.fullname" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.web.service.port }}
+      targetPort: http
+{{- end }}

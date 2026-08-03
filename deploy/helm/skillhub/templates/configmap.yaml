@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skillhub.configmap.fullname" . }}
+  labels:
+    {{- include "skillhub.labels" . | nindent 4 }}
+data:
+  # Redis
+  redis-host: {{ include "skillhub.redisHost" . | quote }}
+  redis-port: {{ include "skillhub.redisPort" . | quote }}
+
+  # Storage
+  storage-base-path: {{ .Values.storage.basePath | quote }}
+  skillhub-storage-provider: {{ .Values.storage.provider | quote }}
+
+  # Scanner
+  skill-scanner-enabled: {{ .Values.scanner.enabled | quote }}
+  skill-scanner-url: {{ printf "http://%s:%d" (include "skillhub.scanner.fullname" .) (int .Values.scanner.service.port) | quote }}
+  skill-scanner-mode: {{ .Values.scanner.mode | quote }}
+
+  # Bootstrap admin (non-sensitive)
+  bootstrap-admin-enabled: {{ .Values.bootstrapAdmin.enabled | quote }}
+  bootstrap-admin-user-id: {{ .Values.bootstrapAdmin.userId | quote }}
+  bootstrap-admin-username: {{ .Values.bootstrapAdmin.username | quote }}
+  bootstrap-admin-display-name: {{ .Values.bootstrapAdmin.displayName | quote }}
+  bootstrap-admin-email: {{ .Values.bootstrapAdmin.email | quote }}
+
+  # Session
+  session-cookie-secure: {{ .Values.session.cookieSecure | quote }}

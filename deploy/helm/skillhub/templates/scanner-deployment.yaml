@@ -1,0 +1,61 @@
+{{- if .Values.scanner.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skillhub.scanner.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "skillhub.scanner.fullname" . }}
+    {{- include "skillhub.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.scanner.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "skillhub.scanner.fullname" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "skillhub.scanner.fullname" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: scanner
+          image: {{ include "skillhub.image" (list . .Values.scanner) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.scanner.service.port }}
+              name: http
+          env:
+            - name: SKILL_SCANNER_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skill-scanner-llm-api-key
+                  optional: true
+            - name: SKILL_SCANNER_LLM_MODEL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skill-scanner-llm-model
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          {{- with .Values.scanner.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

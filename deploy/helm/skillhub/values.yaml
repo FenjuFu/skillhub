@@ -1,0 +1,182 @@
+# Default values for the SkillHub Helm chart.
+# This chart mirrors the Kustomize manifests under deploy/k8s and makes them
+# values-driven. See deploy/helm/skillhub/README.md for the full guide.
+
+# -- Override the chart name portion of resource names.
+nameOverride: ""
+# -- Override the full resource name prefix (defaults to <release>-skillhub logic).
+fullnameOverride: ""
+
+image:
+  # -- Registry / namespace prepended to every component image.
+  registry: ghcr.io/iflytek
+  # -- Default image tag applied to all SkillHub components unless overridden per-component.
+  tag: latest
+  # -- Default image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Image pull secrets applied to every pod (e.g. for a private GHCR package).
+imagePullSecrets: []
+# - name: ghcr-secret
+
+# ---------------------------------------------------------------------------
+# Backend API (Spring Boot)
+# ---------------------------------------------------------------------------
+server:
+  enabled: true
+  image:
+    repository: skillhub-server
+    # -- Overrides image.tag for the backend only.
+    tag: ""
+  replicas: 1
+  springProfile: docker
+  service:
+    port: 8080
+  # -- Extra environment variables appended to the backend container.
+  extraEnv: []
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# Frontend (React / Nginx)
+# ---------------------------------------------------------------------------
+web:
+  enabled: true
+  image:
+    repository: skillhub-web
+    tag: ""
+  replicas: 1
+  service:
+    port: 80
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# Security scanner
+# ---------------------------------------------------------------------------
+scanner:
+  enabled: true
+  image:
+    repository: skillhub-scanner
+    tag: ""
+  replicas: 1
+  # -- Scan mode: upload | download.
+  mode: upload
+  service:
+    port: 8000
+  # -- Optional LLM configuration for scanning (stored in the chart Secret).
+  llm:
+    apiKey: ""
+    model: ""
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# Skill package storage
+# ---------------------------------------------------------------------------
+storage:
+  # -- Storage provider: local | s3
+  provider: local
+  basePath: /var/lib/skillhub/storage
+  # PVC used when provider=local.
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+  # S3 / OSS settings, used when provider=s3.
+  s3:
+    endpoint: ""
+    bucket: ""
+    region: ""
+    accessKey: ""
+    secretKey: ""
+
+session:
+  # -- Set to true when serving over HTTPS so the session cookie is marked Secure.
+  cookieSecure: false
+
+bootstrapAdmin:
+  enabled: true
+  userId: docker-admin
+  username: admin
+  displayName: Platform Admin
+  email: admin@example.com
+  # -- CHANGE THIS for any real deployment.
+  password: "ChangeMe!2026"
+
+oauth2:
+  github:
+    clientId: ""
+    clientSecret: ""
+
+# ---------------------------------------------------------------------------
+# In-cluster PostgreSQL (StatefulSet). Disable to use an external database.
+# ---------------------------------------------------------------------------
+postgresql:
+  enabled: true
+  image: postgres:16-alpine
+  auth:
+    database: skillhub
+    username: skillhub
+    # -- CHANGE THIS for any real deployment.
+    password: change-me
+  persistence:
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Used when postgresql.enabled=false.
+externalDatabase:
+  # -- Full JDBC URL, e.g. jdbc:postgresql://my-host:5432/skillhub
+  url: ""
+  username: ""
+  password: ""
+
+# ---------------------------------------------------------------------------
+# In-cluster Redis (StatefulSet). Disable to use an external Redis.
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true
+  image: redis:7-alpine
+  persistence:
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Used when redis.enabled=false.
+externalRedis:
+  host: ""
+  port: 6379
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+  host: skills.example.com
+  # -- API prefix routed to the backend service.
+  apiPath: /api
+  tls: []
+  # - secretName: skillhub-tls
+  #   hosts:
+  #     - skills.example.com
+
+# ---------------------------------------------------------------------------
+# Use a pre-existing Secret instead of one rendered by this chart.
+# It must provide the same keys as templates/secret.yaml.
+# ---------------------------------------------------------------------------
+existingSecret: ""

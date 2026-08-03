@@ -195,12 +195,19 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 ### 使用 Kubernetes
 
 ```bash
-# 应用 Kubernetes 清单
-kubectl apply -f deploy/k8s/
+# 方式一：Kustomize 清单（内置数据库）
+kubectl apply -k deploy/k8s/overlays/with-infra/
 
-# 或使用 Helm（即将推出）
-helm install skillhub ./deploy/helm
+# 方式二：Helm Chart（values 驱动，可选内置 PostgreSQL / Redis）
+helm install skillhub ./deploy/helm/skillhub \
+  --namespace skillhub --create-namespace \
+  --set ingress.host=skills.example.com \
+  --set bootstrapAdmin.password='<强密码>' \
+  --set postgresql.auth.password='<数据库强密码>'
 ```
+
+Helm Chart 的完整配置（外部数据库/Redis、S3 存储、生产加固等）见
+[chart README](./deploy/helm/skillhub/README.md)。
 
 ### 环境变量
 
@@ -302,7 +309,7 @@ SkillHub 采用清晰的分层架构：
 - [x] API 令牌管理
 - [x] 账户合并
 - [x] 国际化支持
-- [ ] Helm Chart 部署
+- [x] Helm Chart 部署
 - [ ] 高级搜索过滤器
 - [ ] 技能依赖管理
 - [ ] Webhook 集成

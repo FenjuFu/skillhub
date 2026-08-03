@@ -325,6 +325,23 @@ kubectl apply -f deploy/k8s/services.yaml
 kubectl apply -f deploy/k8s/ingress.yaml
 ```
 
+### Helm
+
+A Helm chart is available under [`deploy/helm/skillhub/`](./deploy/helm/skillhub)
+for a values-driven install (backend, frontend, scanner, plus optional in-cluster
+PostgreSQL and Redis):
+
+```bash
+helm install skillhub ./deploy/helm/skillhub \
+  --namespace skillhub --create-namespace \
+  --set ingress.host=skills.example.com \
+  --set bootstrapAdmin.password='<strong-password>' \
+  --set postgresql.auth.password='<strong-db-password>'
+```
+
+See the [chart README](./deploy/helm/skillhub/README.md) for external
+database/Redis, S3 storage, and production hardening options.
+
 ## Smoke Test
 
 A lightweight smoke test script is available at [`scripts/smoke-test.sh`](./scripts/smoke-test.sh).

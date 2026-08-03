@@ -1,0 +1,17 @@
+{{- if .Values.scanner.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skillhub.scanner.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "skillhub.scanner.fullname" . }}
+    {{- include "skillhub.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "skillhub.scanner.fullname" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.scanner.service.port }}
+      targetPort: http
+{{- end }}

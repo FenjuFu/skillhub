@@ -1,0 +1,18 @@
+apiVersion: v2
+name: skillhub
+description: An enterprise-grade, self-hosted agent skill registry — publish, discover, and govern reusable skill packages.
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/iflytek/skillhub
+sources:
+  - https://github.com/iflytek/skillhub
+keywords:
+  - skillhub
+  - agent-skills
+  - registry
+  - skill-registry
+maintainers:
+  - name: iFlytek Astron
+    url: https://github.com/iflytek/skillhub
+icon: https://raw.githubusercontent.com/iflytek/skillhub/main/skillhub-logo.svg
