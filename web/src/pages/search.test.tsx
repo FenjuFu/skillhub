@@ -200,6 +200,25 @@ describe('SearchPage', () => {
     })
   })
 
+  it('offers compliance search suggestions that update the query', () => {
+    renderToStaticMarkup(<SearchPage />)
+
+    findButton('MITRE T1059').onClick?.()
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/search',
+      search: {
+        q: 'MITRE T1059',
+        namespace: 'team-ai',
+        label: 'code-generation',
+        sort: 'downloads',
+        page: 0,
+        starredOnly: false,
+      },
+      replace: true,
+    })
+  })
+
   it('preserves the active label when paging and when toggling starred-only', () => {
     renderToStaticMarkup(<SearchPage />)
 

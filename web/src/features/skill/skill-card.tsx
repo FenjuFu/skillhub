@@ -5,7 +5,7 @@ import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
-import { Bookmark } from 'lucide-react'
+import { Bookmark, ShieldCheck } from 'lucide-react'
 
 interface SkillCardProps {
   skill: SkillSummary
@@ -23,6 +23,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
   const showStarredHighlight = highlightStarred && isAuthenticated && starredIds.has(skill.id)
   const headlineVersion = getHeadlineVersion(skill)
   const isInteractive = typeof onClick === 'function'
+  const complianceItems = skill.complianceSnapshot?.items?.filter((item) => item.standard || item.controlId) ?? []
 
   return (
     <Card
@@ -59,6 +60,26 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             {skill.summary}
           </p>
         )}
+
+        {complianceItems.length > 0 ? (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            {complianceItems.slice(0, 2).map((item, index) => (
+              <span
+                key={`${item.standard ?? 'standard'}-${item.controlId ?? index}`}
+                className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                title={item.title}
+              >
+                <ShieldCheck className="h-3 w-3" />
+                {[item.standard, item.controlId].filter(Boolean).join(' · ')}
+              </span>
+            ))}
+            {complianceItems.length > 2 ? (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                +{complianceItems.length - 2}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground">
           {headlineVersion && (

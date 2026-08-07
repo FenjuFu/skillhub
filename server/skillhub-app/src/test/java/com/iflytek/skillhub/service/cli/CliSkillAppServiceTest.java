@@ -75,7 +75,7 @@ class CliSkillAppServiceTest {
                         "global", Instant.now(), false,
                         new SkillLifecycleVersionResponse(1L, "1.2.0", "PUBLISHED"),
                         new SkillLifecycleVersionResponse(1L, "1.2.0", "PUBLISHED"),
-                        null, "PUBLISHED"
+                        null, "PUBLISHED", null
                 )),
                 1L, 0, 20
         );
@@ -103,7 +103,7 @@ class CliSkillAppServiceTest {
                                 "global", Instant.now(), false,
                                 new SkillLifecycleVersionResponse(2L, "1.0.0", "PUBLISHED"),
                                 new SkillLifecycleVersionResponse(2L, "1.0.0", "PUBLISHED"),
-                                null, "PUBLISHED"
+                                null, "PUBLISHED", null
                         )
                 ),
                 1L, 0, 20
