@@ -119,10 +119,12 @@ done
 if [ "$USE_ALIYUN" = "true" ]; then
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://imageless.oss-cn-beijing.aliyuncs.com}"
   RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/runtime.sh"
+  RUNTIME_SOURCE_ARG=" --aliyun"
   echo "Using Aliyun OSS for runtime files: $SKILLHUB_RAW_BASE"
 else
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF}"
   RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/scripts/runtime.sh"
+  RUNTIME_SOURCE_ARG=""
   echo "Using GitHub raw for runtime files: $SKILLHUB_RAW_BASE"
 fi
 COMPOSE_FILE="$SKILLHUB_HOME/compose.release.yml"
@@ -398,7 +400,7 @@ Web UI: $PUBLIC_URL
 Backend API: http://localhost:8080
 Runtime dir: $SKILLHUB_HOME
 Stop with:
-  curl -fsSL $RUNTIME_SCRIPT_URL | sh -s -- down$HOME_ARG
+  curl -fsSL $RUNTIME_SCRIPT_URL | sh -s -- down$RUNTIME_SOURCE_ARG$HOME_ARG
 EOF
     ;;
   down)
