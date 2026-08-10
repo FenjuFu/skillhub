@@ -4058,6 +4058,24 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
+        ComplianceEvidenceResponse: {
+            type?: string;
+            path?: string;
+            url?: string;
+            sha256?: string;
+        };
+        ComplianceMappingResponse: {
+            standard?: string;
+            version?: string;
+            controlId?: string;
+            title?: string;
+            evidence?: components["schemas"]["ComplianceEvidenceResponse"][];
+        };
+        ComplianceSnapshotResponse: {
+            schemaVersion?: string;
+            items?: components["schemas"]["ComplianceMappingResponse"][];
+            digest?: string;
+        };
         SearchResponse: {
             items?: components["schemas"]["SkillSummaryResponse"][];
             /** Format: int64 */
@@ -4096,6 +4114,7 @@ export interface components {
             publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
             ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
             resolutionMode?: string;
+            complianceSnapshot?: components["schemas"]["ComplianceSnapshotResponse"];
         };
         ApiResponseBoolean: {
             /** Format: int32 */
@@ -4146,24 +4165,6 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
-        };
-        ComplianceEvidenceResponse: {
-            type?: string;
-            path?: string;
-            url?: string;
-            sha256?: string;
-        };
-        ComplianceMappingResponse: {
-            standard?: string;
-            version?: string;
-            controlId?: string;
-            title?: string;
-            evidence?: components["schemas"]["ComplianceEvidenceResponse"][];
-        };
-        ComplianceSnapshotResponse: {
-            schemaVersion?: string;
-            items?: components["schemas"]["ComplianceMappingResponse"][];
-            digest?: string;
         };
         SkillVersionDetailResponse: {
             /** Format: int64 */

@@ -188,6 +188,49 @@ class SkillSearchAppServiceTest {
     }
 
     @Test
+    void search_shouldProjectComplianceSnapshotFromHeadlineVersion() {
+        Skill skill = new Skill(1L, "compliance-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 10L);
+        skill.setLatestVersionId(101L);
+
+        SkillVersion version = publishedVersion(10L, 101L, "1.0.0");
+        version.setParsedMetadataJson("""
+                {
+                  "complianceSnapshot": {
+                    "schemaVersion": "1.0",
+                    "items": [
+                      {
+                        "standard": "mitre-attack",
+                        "version": "v19.1",
+                        "controlId": "T1059",
+                        "title": "Command and Scripting Interpreter",
+                        "evidence": []
+                      }
+                    ],
+                    "digest": "sha256:demo"
+                  }
+                }
+                """);
+
+        Namespace namespace = new Namespace("global", "Global", "owner-1");
+        setField(namespace, "id", 1L);
+        namespace.setStatus(NamespaceStatus.ACTIVE);
+
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(10L), 1, 0, 20));
+        when(skillRepository.findByIdIn(List.of(10L))).thenReturn(List.of(skill));
+        when(namespaceRepository.findByIdIn(List.of(1L))).thenReturn(List.of(namespace));
+        when(skillVersionRepository.findByIdIn(List.of(101L))).thenReturn(List.of(version));
+
+        SkillSearchAppService.SearchResponse response = service.search("T1059", null, "relevance", 0, 20, null, null);
+
+        assertEquals(1, response.items().size());
+        assertEquals("mitre-attack", response.items().getFirst().complianceSnapshot().items().getFirst().standard());
+        assertEquals("T1059", response.items().getFirst().complianceSnapshot().items().getFirst().controlId());
+        assertEquals("sha256:demo", response.items().getFirst().complianceSnapshot().digest());
+    }
+
+    @Test
     void search_shouldNotFallbackToOlderPublishedVersionWhenLatestIsMissing() {
         Skill skill = new Skill(1L, "missing-latest", "owner-1", SkillVisibility.PUBLIC);
         setField(skill, "id", 10L);

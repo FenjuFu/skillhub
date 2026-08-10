@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -36,6 +37,7 @@ public class SkillSearchAppService {
     private final NamespaceRepository namespaceRepository;
     private final NamespaceService namespaceService;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
+    private final ComplianceSnapshotProjectionService complianceSnapshotProjectionService;
     private final RbacService rbacService;
 
     public SkillSearchAppService(
@@ -45,11 +47,32 @@ public class SkillSearchAppService {
             NamespaceService namespaceService,
             SkillLifecycleProjectionService skillLifecycleProjectionService,
             RbacService rbacService) {
+        this(
+                searchQueryService,
+                skillRepository,
+                namespaceRepository,
+                namespaceService,
+                skillLifecycleProjectionService,
+                new ComplianceSnapshotProjectionService(new com.fasterxml.jackson.databind.ObjectMapper()),
+                rbacService
+        );
+    }
+
+    @Autowired
+    public SkillSearchAppService(
+            SearchQueryService searchQueryService,
+            SkillRepository skillRepository,
+            NamespaceRepository namespaceRepository,
+            NamespaceService namespaceService,
+            SkillLifecycleProjectionService skillLifecycleProjectionService,
+            ComplianceSnapshotProjectionService complianceSnapshotProjectionService,
+            RbacService rbacService) {
         this.searchQueryService = searchQueryService;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.namespaceService = namespaceService;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
+        this.complianceSnapshotProjectionService = complianceSnapshotProjectionService;
         this.rbacService = rbacService;
     }
 
@@ -198,7 +221,11 @@ public class SkillSearchAppService {
         return skillIds.stream()
                 .map(skillsById::get)
                 .filter(java.util.Objects::nonNull)
-                .map(skill -> toSummaryResponse(skill, namespaceSlugsById, projectionsBySkillId.get(skill.getId())))
+                .map(skill -> toSummaryResponse(
+                        skill,
+                        namespaceSlugsById,
+                        projectionsBySkillId.get(skill.getId())
+                ))
                 .toList();
     }
 
@@ -207,6 +234,7 @@ public class SkillSearchAppService {
             Map<Long, String> namespaceSlugsById,
             SkillLifecycleProjectionService.Projection projection) {
         String namespaceSlug = namespaceSlugsById.get(skill.getNamespaceId());
+        SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
 
         return new SkillSummaryResponse(
                 skill.getId(),
@@ -225,7 +253,10 @@ public class SkillSearchAppService {
                 toLifecycleVersion(projection.headlineVersion()),
                 toLifecycleVersion(projection.publishedVersion()),
                 toLifecycleVersion(projection.ownerPreviewVersion()),
-                projection.resolutionMode().name()
+                projection.resolutionMode().name(),
+                headlineVersion != null
+                        ? complianceSnapshotProjectionService.fromParsedMetadataJson(headlineVersion.parsedMetadataJson())
+                        : null
         );
     }
 

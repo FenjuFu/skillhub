@@ -1,9 +1,13 @@
 {
   "compliance": {
-    "title": "合规映射",
+    "title": "合规声明",
     "mappingCount": "{{count}} 项",
     "unknownStandard": "未知标准",
     "evidence": "证据"
+  },
+  "common": {
+    "expand": "展开详情",
+    "collapse": "收起详情"
   },
   "nav": {
     "landing": "首页",

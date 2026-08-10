@@ -63,7 +63,8 @@ x-astron-compliance:                 # 可选，平台私有合规元数据
 ```
 
 > 合规元数据先按 SkillHub/Astron 私有扩展实现，字段名采用 `x-astron-compliance`。
-> 当前第一阶段支持发布校验和版本级 `complianceSnapshot` 固化；详情展示、审核 diff、搜索 facet
+> 当前第一阶段支持发布校验和版本级 `complianceSnapshot` 固化；这些信息表示“技能作者声明的合规映射”，
+> SkillHub 校验证据引用的格式和可访问性，但不等同于第三方认证或平台背书。详情展示、审核 diff、搜索投影
 > 和 Runtime trace 集成按后续阶段推进。设计边界、分阶段实现和 Runtime 职责划分见
 > [24-compliance-metadata-design.md](24-compliance-metadata-design.md)。
 

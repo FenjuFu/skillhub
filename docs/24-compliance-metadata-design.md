@@ -20,6 +20,10 @@ Issue #556 提出的方向是让 SkillHub 支持“可标准映射、可审计�
 
 > SkillHub 负责“这个技能版本声明了什么合规能力”；Agent Runtime 负责“这次执行实际用了哪个技能版本”。两者通过 `skillVersionId + complianceSnapshotDigest` 关联。
 
+这里的 compliance 是作者随技能包提交的声明型元数据。SkillHub 第一阶段只验证字段结构、取值格式、
+包内证据文件是否存在、外部证据 URL 是否是合法 HTTP(S) URL，并生成不可变快照摘要；它不验证外部标准内容是否真实适用，
+也不代表第三方审计、认证通过或平台背书。
+
 ## 2. 职责边界
 
 ### 2.1 SkillHub 职责

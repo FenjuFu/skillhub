@@ -1,9 +1,13 @@
 {
   "compliance": {
-    "title": "Compliance mappings",
+    "title": "Compliance claims",
     "mappingCount": "{{count}} items",
     "unknownStandard": "Unknown standard",
     "evidence": "Evidence"
+  },
+  "common": {
+    "expand": "Expand details",
+    "collapse": "Collapse details"
   },
   "nav": {
     "landing": "Home",

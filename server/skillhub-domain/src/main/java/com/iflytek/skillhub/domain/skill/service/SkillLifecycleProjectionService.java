@@ -30,8 +30,13 @@ public class SkillLifecycleProjectionService {
     public record VersionProjection(
             Long id,
             String version,
-            String status
-    ) {}
+            String status,
+            String parsedMetadataJson
+    ) {
+        public VersionProjection(Long id, String version, String status) {
+            this(id, version, status, null);
+        }
+    }
 
     public record Projection(
             VersionProjection headlineVersion,
@@ -153,6 +158,11 @@ public class SkillLifecycleProjectionService {
         if (version == null) {
             return null;
         }
-        return new VersionProjection(version.getId(), version.getVersion(), version.getStatus().name());
+        return new VersionProjection(
+                version.getId(),
+                version.getVersion(),
+                version.getStatus().name(),
+                version.getParsedMetadataJson()
+        );
     }
 }
