@@ -92,6 +92,19 @@ grep -Fq "Generated SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET" "$stdout_generated" \
 if grep -Fq "$generated_secret" "$stdout_generated"; then
   fail "runtime must not print the generated secret value"
 fi
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- down --home $home_generated" "$stdout_generated" \
+  || fail "GitHub runtime should print the scripts/runtime.sh stop URL"
+
+home_aliyun="$tmp/aliyun"
+stdout_aliyun="$tmp/aliyun.out"
+mkdir -p "$home_aliyun"
+run_runtime "$home_aliyun" "$bin_dir" "$stdout_aliyun" --aliyun
+
+grep -Fq "curl -fsSL file://$REPO_ROOT/runtime.sh | sh -s -- down --aliyun --home $home_aliyun" "$stdout_aliyun" \
+  || fail "Aliyun runtime should preserve the root runtime.sh URL and --aliyun source mode"
+if grep -Fq "file://$REPO_ROOT/scripts/runtime.sh" "$stdout_aliyun"; then
+  fail "Aliyun runtime must not print the GitHub scripts/runtime.sh path"
+fi
 
 home_preserved="$tmp/preserved"
 stdout_preserved="$tmp/preserved.out"
