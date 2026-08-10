@@ -18,7 +18,6 @@ import { Button } from '@/shared/ui/button'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 
 const PAGE_SIZE = 12
-const COMPLIANCE_SEARCH_SUGGESTIONS = ['MITRE T1059', 'NIST CSF', 'SOC2', 'GDPR']
 
 function blurActiveElement() {
   if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') {
@@ -166,13 +165,6 @@ export function SearchPage() {
     })
   }
 
-  const handleComplianceSuggestion = (query: string) => {
-    setQueryInput(formatNamespaceSearchInput(namespace, query))
-    startTransition(() => {
-      navigate({ to: '/search', search: { q: query, namespace, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
-    })
-  }
-
   const handleSortChange = (newSort: string) => {
     navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort: newSort, page: 0, starredOnly } })
   }
@@ -312,19 +304,6 @@ export function SearchPage() {
               {t('search.namespaceFilter', { namespace })}
             </Button>
           ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="shrink-0 text-sm font-medium text-muted-foreground">{t('search.complianceSuggestions')}</span>
-          {COMPLIANCE_SEARCH_SUGGESTIONS.map((suggestion) => (
-            <Button
-              key={suggestion}
-              variant={q.toLowerCase() === suggestion.toLowerCase() ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleComplianceSuggestion(suggestion)}
-            >
-              {suggestion}
-            </Button>
-          ))}
         </div>
       </div>
 

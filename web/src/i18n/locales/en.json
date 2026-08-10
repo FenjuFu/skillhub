@@ -1,9 +1,13 @@
 {
   "compliance": {
-    "title": "Compliance mappings",
+    "title": "Compliance claims",
     "mappingCount": "{{count}} items",
     "unknownStandard": "Unknown standard",
     "evidence": "Evidence"
+  },
+  "common": {
+    "expand": "Expand details",
+    "collapse": "Collapse details"
   },
   "nav": {
     "landing": "Home",
@@ -199,8 +203,7 @@
     "enterKeyword": "Please enter a search keyword",
     "results": "{{count}} skills found",
     "resultCount": "Found <1>{{count}}</1> results",
-    "loadingMore": "Updating search results...",
-    "complianceSuggestions": "Compliance:"
+    "loadingMore": "Updating search results..."
   },
   "searchBar": {
     "placeholder": "Search skills...",
