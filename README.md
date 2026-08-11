@@ -38,6 +38,7 @@ firewall, with the same polish you'd expect from a public registry.
 
 - 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
 - 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
+- 🐍 **[Python Examples](./examples/python)** — Search, download, and publish skills from Python via the REST API
 
 ## Highlights
 
