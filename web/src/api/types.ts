@@ -596,3 +596,19 @@ export interface PersonalNamespaceSettingsInput {
   slugTemplate: string
   displayNameTemplate: string
 }
+
+export interface PersonalNamespaceBackfillEntry {
+  userId: string
+  displayName: string | null
+  slug: string | null
+  outcome: 'PLANNED' | 'CREATED' | 'NO_SLUG'
+}
+
+export interface PersonalNamespaceBackfillResult {
+  dryRun: boolean
+  scannedAccounts: number
+  alreadyProvisioned: number
+  systemAccountsSkipped: number
+  truncated: boolean
+  entries: PersonalNamespaceBackfillEntry[]
+}

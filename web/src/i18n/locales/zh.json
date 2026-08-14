@@ -1668,6 +1668,25 @@
     "saveErrorTitle": "保存设置失败",
     "validationTitle": "请检查表单",
     "validationTemplateRequired": "模板不能为空。",
-    "fallbackErrorDescription": "请稍后重试。"
+    "fallbackErrorDescription": "请稍后重试。",
+    "backfillTitle": "为现有账号补建",
+    "backfillDescription": "打开开关只对之后激活的账号生效。已经存在的账号需要执行一次补建，才会拿到本该属于他们的命名空间。",
+    "backfillPreviewAction": "预览",
+    "backfillApplyAction": "创建 {{count}} 个命名空间",
+    "backfillPreviewFirstHint": "请先预览——未预览前创建按钮不可用。",
+    "backfillSummary": "扫描 {{scanned}} 个账号 · {{already}} 个已有 · {{acted}} 个待处理",
+    "backfillTruncated": "已达单次上限而停止，再执行一次可继续。",
+    "backfillNothingToDo": "所有账号都已经有命名空间了。",
+    "backfillColumnUser": "账号",
+    "backfillColumnSlug": "标识",
+    "backfillColumnOutcome": "结果",
+    "backfillOutcome": {
+      "PLANNED": "将创建",
+      "CREATED": "已创建",
+      "NO_SLUG": "无可用标识"
+    },
+    "backfillDoneTitle": "补建完成",
+    "backfillDoneDescription": "已创建 {{count}} 个命名空间。",
+    "backfillErrorTitle": "补建失败"
   }
 }

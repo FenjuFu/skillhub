@@ -336,6 +336,7 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 |------|------|------|
 | GET | `/api/v1/admin/settings/personal-namespace` | 读取「新账号自动建命名空间」策略 |
 | PUT | `/api/v1/admin/settings/personal-namespace` | 更新该策略（写审计日志） |
+| POST | `/api/v1/admin/settings/personal-namespace/backfill` | 为已有账号补建；`dryRun=true` 只返回计划，不写库 |
 
 详见 [`2026-08-13-personal-namespace-provisioning.md`](./2026-08-13-personal-namespace-provisioning.md)。
 

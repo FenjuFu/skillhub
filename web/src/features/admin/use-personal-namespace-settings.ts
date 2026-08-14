@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
-import type { PersonalNamespaceSettings, PersonalNamespaceSettingsInput } from '@/api/types'
+import type {
+  PersonalNamespaceBackfillResult,
+  PersonalNamespaceSettings,
+  PersonalNamespaceSettingsInput,
+} from '@/api/types'
 
 const QUERY_KEY = ['admin', 'settings', 'personal-namespace']
 
@@ -19,6 +23,19 @@ export function useUpdatePersonalNamespaceSettings() {
       adminApi.updatePersonalNamespaceSettings(request),
     onSuccess: (settings) => {
       queryClient.setQueryData(QUERY_KEY, settings)
+    },
+  })
+}
+
+export function useBackfillPersonalNamespaces() {
+  const queryClient = useQueryClient()
+
+  return useMutation<PersonalNamespaceBackfillResult, Error, boolean>({
+    mutationFn: (dryRun: boolean) => adminApi.backfillPersonalNamespaces(dryRun),
+    onSuccess: (result) => {
+      if (!result.dryRun) {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'namespaces'] })
+      }
     },
   })
 }

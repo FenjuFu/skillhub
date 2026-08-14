@@ -1588,6 +1588,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/settings/personal-namespace/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["backfillPersonalNamespaces"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/search/rebuild": {
         parameters: {
             query?: never;
@@ -4168,6 +4184,35 @@ export interface components {
         AdminSkillReportActionRequest: {
             comment?: string;
             disposition?: string;
+        };
+        PersonalNamespaceBackfillRequest: {
+            dryRun: boolean;
+        };
+        ApiResponsePersonalNamespaceBackfillResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PersonalNamespaceBackfillResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        Entry: {
+            userId?: string;
+            displayName?: string;
+            slug?: string;
+            outcome?: string;
+        };
+        PersonalNamespaceBackfillResponse: {
+            dryRun?: boolean;
+            /** Format: int32 */
+            scannedAccounts?: number;
+            /** Format: int32 */
+            alreadyProvisioned?: number;
+            /** Format: int32 */
+            systemAccountsSkipped?: number;
+            truncated?: boolean;
+            entries?: components["schemas"]["Entry"][];
         };
         ProfileReviewRejectRequest: {
             comment: string;
@@ -8622,6 +8667,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
+                };
+            };
+        };
+    };
+    backfillPersonalNamespaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalNamespaceBackfillRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePersonalNamespaceBackfillResponse"];
                 };
             };
         };

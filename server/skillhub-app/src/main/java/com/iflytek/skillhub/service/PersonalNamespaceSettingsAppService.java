@@ -2,8 +2,12 @@ package com.iflytek.skillhub.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillEntry;
+import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillReport;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceProvisioningService;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceSettings;
+import com.iflytek.skillhub.dto.PersonalNamespaceBackfillRequest;
+import com.iflytek.skillhub.dto.PersonalNamespaceBackfillResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsUpdateRequest;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
@@ -22,6 +26,7 @@ public class PersonalNamespaceSettingsAppService {
 
     private static final String AUDIT_TARGET_TYPE = "SYSTEM_SETTING";
     private static final String AUDIT_ACTION_UPDATE = "SYSTEM_SETTING_PERSONAL_NAMESPACE_UPDATE";
+    private static final String AUDIT_ACTION_BACKFILL = "SYSTEM_SETTING_PERSONAL_NAMESPACE_BACKFILL";
 
     private static final List<String> SUPPORTED_PLACEHOLDERS = List.of(
             PersonalNamespaceSettings.PLACEHOLDER_USERNAME,
@@ -62,6 +67,57 @@ public class PersonalNamespaceSettingsAppService {
         personalNamespaceProvisioningService.updateSettings(updated, actorUserId);
         recordAudit(actorUserId, auditContext, previous, updated);
         return toResponse(updated);
+    }
+
+    /**
+     * Runs the backfill over existing accounts. A dry run writes nothing and is not audited; an
+     * applied run records what it created.
+     */
+    public PersonalNamespaceBackfillResponse backfill(PersonalNamespaceBackfillRequest request,
+                                                      String actorUserId,
+                                                      AuditRequestContext auditContext) {
+        boolean dryRun = Boolean.TRUE.equals(request.dryRun());
+        PersonalNamespaceBackfillReport report = personalNamespaceProvisioningService.backfill(dryRun);
+
+        if (!dryRun) {
+            recordBackfillAudit(actorUserId, auditContext, report);
+        }
+        return new PersonalNamespaceBackfillResponse(
+                report.dryRun(),
+                report.scannedAccounts(),
+                report.alreadyProvisioned(),
+                report.systemAccountsSkipped(),
+                report.truncated(),
+                report.entries().stream()
+                        .map(entry -> new PersonalNamespaceBackfillResponse.Entry(
+                                entry.userId(), entry.displayName(), entry.slug(), entry.outcome().name()))
+                        .toList());
+    }
+
+    private void recordBackfillAudit(String actorUserId,
+                                     AuditRequestContext auditContext,
+                                     PersonalNamespaceBackfillReport report) {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("scannedAccounts", report.scannedAccounts());
+        detail.put("alreadyProvisioned", report.alreadyProvisioned());
+        detail.put("truncated", report.truncated());
+        detail.put("created", report.entries().stream()
+                .filter(entry -> entry.outcome() == PersonalNamespaceBackfillEntry.Outcome.CREATED)
+                .map(entry -> Map.of("userId", entry.userId(), "slug", entry.slug()))
+                .toList());
+        detail.put("unplaced", report.entries().stream()
+                .filter(entry -> entry.outcome() == PersonalNamespaceBackfillEntry.Outcome.NO_SLUG)
+                .map(PersonalNamespaceBackfillEntry::userId)
+                .toList());
+        auditLogService.record(
+                actorUserId,
+                AUDIT_ACTION_BACKFILL,
+                AUDIT_TARGET_TYPE,
+                null,
+                requestIdAccessor.current(),
+                auditContext != null ? auditContext.clientIp() : null,
+                auditContext != null ? auditContext.userAgent() : null,
+                toJson(detail));
     }
 
     private PersonalNamespaceSettingsResponse toResponse(PersonalNamespaceSettings settings) {

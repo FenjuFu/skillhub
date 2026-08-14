@@ -6,8 +6,17 @@ import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import type { PersonalNamespaceSettingsInput } from '@/api/types'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/shared/ui/table'
+import type { PersonalNamespaceBackfillResult, PersonalNamespaceSettingsInput } from '@/api/types'
+import {
+  useBackfillPersonalNamespaces,
   usePersonalNamespaceSettings,
   useUpdatePersonalNamespaceSettings,
 } from '@/features/admin/use-personal-namespace-settings'
@@ -43,6 +52,8 @@ export function AdminSettingsPage() {
   const { t } = useTranslation()
   const { data: settings, isLoading } = usePersonalNamespaceSettings()
   const updateMutation = useUpdatePersonalNamespaceSettings()
+  const backfillMutation = useBackfillPersonalNamespaces()
+  const [backfill, setBackfill] = useState<PersonalNamespaceBackfillResult | null>(null)
 
   const [form, setForm] = useState<PersonalNamespaceSettingsInput>({
     enabled: false,
@@ -63,6 +74,29 @@ export function AdminSettingsPage() {
   const slugPreview = previewSlug(form.slugTemplate)
   const displayNamePreview = renderTemplate(form.displayNameTemplate).trim()
   const placeholders = settings?.supportedPlaceholders ?? Object.keys(PREVIEW_OWNER)
+
+  const runBackfill = async (dryRun: boolean) => {
+    try {
+      const result = await backfillMutation.mutateAsync(dryRun)
+      setBackfill(result)
+      if (!dryRun) {
+        const created = result.entries.filter((entry) => entry.outcome === 'CREATED').length
+        toast.success(
+          t('adminSettings.backfillDoneTitle'),
+          t('adminSettings.backfillDoneDescription', { count: created }),
+        )
+      }
+    } catch (error) {
+      toast.error(
+        t('adminSettings.backfillErrorTitle'),
+        error instanceof Error ? error.message : t('adminSettings.fallbackErrorDescription'),
+      )
+    }
+  }
+
+  const plannedCount = backfill?.dryRun
+    ? backfill.entries.filter((entry) => entry.outcome === 'PLANNED').length
+    : 0
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -163,6 +197,73 @@ export function AdminSettingsPage() {
             </div>
           </form>
         )}
+      </Card>
+
+      <Card className="p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold font-heading">{t('adminSettings.backfillTitle')}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('adminSettings.backfillDescription')}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={backfillMutation.isPending}
+            onClick={() => runBackfill(true)}
+          >
+            {t('adminSettings.backfillPreviewAction')}
+          </Button>
+          <Button
+            type="button"
+            disabled={backfillMutation.isPending || !backfill?.dryRun || plannedCount === 0}
+            onClick={() => runBackfill(false)}
+          >
+            {t('adminSettings.backfillApplyAction', { count: plannedCount })}
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t('adminSettings.backfillPreviewFirstHint')}</p>
+
+        {backfill ? (
+          <div className="mt-6 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('adminSettings.backfillSummary', {
+                scanned: backfill.scannedAccounts,
+                already: backfill.alreadyProvisioned,
+                acted: backfill.entries.length,
+              })}
+            </p>
+            {backfill.truncated ? (
+              <p className="text-sm font-medium text-foreground">{t('adminSettings.backfillTruncated')}</p>
+            ) : null}
+            {backfill.entries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('adminSettings.backfillNothingToDo')}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('adminSettings.backfillColumnUser')}</TableHead>
+                      <TableHead>{t('adminSettings.backfillColumnSlug')}</TableHead>
+                      <TableHead>{t('adminSettings.backfillColumnOutcome')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {backfill.entries.map((entry) => (
+                      <TableRow key={entry.userId}>
+                        <TableCell>{entry.displayName || entry.userId}</TableCell>
+                        <TableCell className="font-mono text-xs">{entry.slug ?? '—'}</TableCell>
+                        <TableCell>{t(`adminSettings.backfillOutcome.${entry.outcome}`)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        ) : null}
       </Card>
     </div>
   )

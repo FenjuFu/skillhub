@@ -1,16 +1,21 @@
 package com.iflytek.skillhub.domain.namespace;
 
 import com.iflytek.skillhub.domain.setting.SystemSettingService;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.domain.user.UserStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -37,6 +42,9 @@ class PersonalNamespaceProvisioningServiceTest {
     @Mock
     private NamespaceMemberRepository namespaceMemberRepository;
 
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
     private PersonalNamespaceProvisioningService service;
 
     @BeforeEach
@@ -46,7 +54,17 @@ class PersonalNamespaceProvisioningServiceTest {
                 new PersonalNamespaceProvisioningProperties(),
                 namespaceService,
                 namespaceRepository,
-                namespaceMemberRepository);
+                namespaceMemberRepository,
+                userAccountRepository);
+    }
+
+    private UserAccount account(String id, String displayName, String email) {
+        return new UserAccount(id, displayName, email, null);
+    }
+
+    private void directoryContains(UserAccount... users) {
+        when(userAccountRepository.search(isNull(), eq(UserStatus.ACTIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(users)));
     }
 
     private void withSettings(boolean enabled, String slugTemplate, String displayNameTemplate) {
@@ -158,6 +176,96 @@ class PersonalNamespaceProvisioningServiceTest {
         service.provisionFor(ALICE);
 
         verify(namespaceService).createNamespace(eq("alice"), any(), isNull(), eq("usr_alice"));
+    }
+
+    @Test
+    void backfillDryRunPlansWithoutCreatingAnything() {
+        withSettings(true, "${username}", "${username}");
+        directoryContains(account("usr_alice", "alice", "alice@example.com"));
+        when(namespaceMemberRepository.findByUserId("usr_alice")).thenReturn(List.of());
+        when(namespaceRepository.findBySlug("alice")).thenReturn(Optional.empty());
+
+        PersonalNamespaceBackfillReport report = service.backfill(true);
+
+        assertTrue(report.dryRun());
+        assertEquals(1, report.scannedAccounts());
+        assertEquals(1, report.entries().size());
+        assertEquals("alice", report.entries().getFirst().slug());
+        assertEquals(PersonalNamespaceBackfillEntry.Outcome.PLANNED, report.entries().getFirst().outcome());
+        verify(namespaceService, never()).createNamespace(any(), any(), any(), any());
+    }
+
+    @Test
+    void backfillCreatesNamespacesForAccountsThatHaveNone() {
+        withSettings(true, "${username}", "${username}");
+        directoryContains(account("usr_alice", "alice", "alice@example.com"));
+        when(namespaceMemberRepository.findByUserId("usr_alice")).thenReturn(List.of());
+        when(namespaceRepository.findBySlug("alice")).thenReturn(Optional.empty());
+        namespaceCreationSucceeds();
+
+        PersonalNamespaceBackfillReport report = service.backfill(false);
+
+        assertFalse(report.dryRun());
+        assertEquals(PersonalNamespaceBackfillEntry.Outcome.CREATED, report.entries().getFirst().outcome());
+        verify(namespaceService).createNamespace(eq("alice"), any(), isNull(), eq("usr_alice"));
+    }
+
+    @Test
+    void backfillCountsAccountsThatAlreadyHaveANamespaceInsteadOfListingThem() {
+        withSettings(true, "${username}", "${username}");
+        directoryContains(account("usr_alice", "alice", "alice@example.com"));
+        when(namespaceMemberRepository.findByUserId("usr_alice"))
+                .thenReturn(List.of(new NamespaceMember(7L, "usr_alice", NamespaceRole.OWNER)));
+        when(namespaceRepository.findById(7L))
+                .thenReturn(Optional.of(new Namespace("alice", "Alice", "usr_alice")));
+
+        PersonalNamespaceBackfillReport report = service.backfill(false);
+
+        assertEquals(1, report.alreadyProvisioned());
+        assertTrue(report.entries().isEmpty());
+        verify(namespaceService, never()).createNamespace(any(), any(), any(), any());
+    }
+
+    @Test
+    void backfillLeavesSystemAccountsAlone() {
+        withSettings(true, "${username}", "${username}");
+        directoryContains(UserAccount.systemAccount(
+                "builtin-skill-publisher", "Built-in Skill Publisher", null, null));
+
+        PersonalNamespaceBackfillReport report = service.backfill(false);
+
+        assertEquals(1, report.systemAccountsSkipped());
+        assertTrue(report.entries().isEmpty());
+        verify(namespaceService, never()).createNamespace(any(), any(), any(), any());
+    }
+
+    @Test
+    void backfillDoesNotPromiseTheSameSlugToTwoAccountsInOneRun() {
+        withSettings(true, "${username}", "${username}");
+        directoryContains(
+                account("usr_1", "alice", "alice@example.com"),
+                account("usr_2", "Alice", "alice2@example.com"));
+        when(namespaceMemberRepository.findByUserId(any())).thenReturn(List.of());
+        when(namespaceRepository.findBySlug(any())).thenReturn(Optional.empty());
+
+        PersonalNamespaceBackfillReport report = service.backfill(true);
+
+        assertEquals(List.of("alice", "alice-2"),
+                report.entries().stream().map(PersonalNamespaceBackfillEntry::slug).toList());
+    }
+
+    @Test
+    void backfillReportsAccountsItCannotPlace() {
+        withSettings(true, "${username}", "${username}");
+        directoryContains(account("usr_alice", "alice", "alice@example.com"));
+        when(namespaceMemberRepository.findByUserId("usr_alice")).thenReturn(List.of());
+        when(namespaceRepository.findBySlug(any()))
+                .thenReturn(Optional.of(new Namespace("taken", "Taken", "usr_x")));
+
+        PersonalNamespaceBackfillReport report = service.backfill(true);
+
+        assertEquals(PersonalNamespaceBackfillEntry.Outcome.NO_SLUG, report.entries().getFirst().outcome());
+        assertEquals(null, report.entries().getFirst().slug());
     }
 
     @Test
