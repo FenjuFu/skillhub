@@ -141,7 +141,7 @@ public class PersonalNamespaceProvisioningService {
         boolean truncated = false;
 
         for (int page = 0; !truncated; page++) {
-            Page<UserAccount> batch = userAccountRepository.search(null, UserStatus.ACTIVE,
+            Page<UserAccount> batch = userAccountRepository.findByStatus(UserStatus.ACTIVE,
                     PageRequest.of(page, BACKFILL_PAGE_SIZE, Sort.by("id")));
             if (batch.isEmpty()) {
                 break;
