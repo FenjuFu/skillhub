@@ -1,5 +1,7 @@
-import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+/** @vitest-environment jsdom */
+
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const usePersonalNamespaceSettingsMock = vi.fn()
 
@@ -64,34 +66,57 @@ describe('AdminSettingsPage', () => {
     })
   })
 
-  it('renders the personal namespace section', () => {
-    const html = renderToStaticMarkup(<AdminSettingsPage />)
-
-    expect(html).toContain('adminSettings.personalNamespaceTitle')
-    expect(html).toContain('adminSettings.slugTemplateLabel')
+  afterEach(() => {
+    cleanup()
   })
 
-  it('offers the backfill for accounts that already exist', () => {
-    const html = renderToStaticMarkup(<AdminSettingsPage />)
+  it('renders the personal namespace section', async () => {
+    render(<AdminSettingsPage />)
 
-    expect(html).toContain('adminSettings.backfillTitle')
-    expect(html).toContain('adminSettings.backfillPreviewAction')
+    expect(await screen.findByText('adminSettings.personalNamespaceTitle')).toBeDefined()
+    expect(await screen.findByText('adminSettings.slugTemplateLabel')).toBeDefined()
   })
 
-  it('keeps the apply button disabled until a preview has been run', () => {
-    const html = renderToStaticMarkup(<AdminSettingsPage />)
+  /**
+   * Regression: the form used to mount before the fetched settings reached it. Radix's Select
+   * keeps a hidden native <select> whose options only exist while the dropdown is mounted, so
+   * changing the controlled value afterwards landed on "" and fired onValueChange(""), which read
+   * as "disabled" and silently reverted the server's answer.
+   */
+  it('keeps the enabled setting the server returned', async () => {
+    render(<AdminSettingsPage />)
 
-    const applyIndex = html.indexOf('adminSettings.backfillApplyAction')
-    expect(applyIndex).toBeGreaterThan(-1)
-    // The apply button carries `disabled` because no preview result exists yet.
-    expect(html.lastIndexOf('disabled', applyIndex)).toBeGreaterThan(-1)
+    const slugTemplate = (await screen.findByLabelText(
+      'adminSettings.slugTemplateLabel',
+    )) as HTMLInputElement
+
+    await waitFor(() => {
+      expect(slugTemplate.disabled).toBe(false)
+    })
+    // The trigger renders the selected item's label, so it must read "enabled".
+    const trigger = document.querySelector('#personal-namespace-enabled')
+    expect(trigger?.textContent).toContain('adminSettings.enabledOn')
   })
 
   it('shows a loading state while the settings are fetched', () => {
     usePersonalNamespaceSettingsMock.mockReturnValue({ data: undefined, isLoading: true })
 
-    const html = renderToStaticMarkup(<AdminSettingsPage />)
+    render(<AdminSettingsPage />)
 
-    expect(html).toContain('adminSettings.loading')
+    expect(screen.getByText('adminSettings.loading')).toBeDefined()
+  })
+
+  it('offers the backfill for accounts that already exist', async () => {
+    render(<AdminSettingsPage />)
+
+    expect(await screen.findByText('adminSettings.backfillTitle')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'adminSettings.backfillPreviewAction' })).toBeDefined()
+  })
+
+  it('keeps the apply button disabled until a preview has been run', async () => {
+    render(<AdminSettingsPage />)
+
+    const apply = await screen.findByRole('button', { name: /backfillApplyAction/ })
+    expect((apply as HTMLButtonElement).disabled).toBe(true)
   })
 })

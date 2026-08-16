@@ -55,24 +55,28 @@ export function AdminSettingsPage() {
   const backfillMutation = useBackfillPersonalNamespaces()
   const [backfill, setBackfill] = useState<PersonalNamespaceBackfillResult | null>(null)
 
-  const [form, setForm] = useState<PersonalNamespaceSettingsInput>({
-    enabled: false,
-    slugTemplate: '${username}',
-    displayNameTemplate: '${username}',
-  })
+  // Null until the server answers. The form must not mount before then: Radix's
+  // Select keeps a hidden native <select> for form integration whose <option>s
+  // only exist while the dropdown content is mounted. Changing the controlled
+  // value before the user has ever opened it therefore assigns a value the
+  // native select has no option for, which lands on "" and fires a real change
+  // event — arriving here as onValueChange(""), which would read as "disabled"
+  // and silently undo what the server just told us.
+  const [form, setForm] = useState<PersonalNamespaceSettingsInput | null>(null)
 
   useEffect(() => {
-    if (settings) {
-      setForm({
-        enabled: settings.enabled,
-        slugTemplate: settings.slugTemplate,
-        displayNameTemplate: settings.displayNameTemplate,
-      })
+    if (!settings) {
+      return
     }
+    setForm((current) => current ?? {
+      enabled: settings.enabled,
+      slugTemplate: settings.slugTemplate,
+      displayNameTemplate: settings.displayNameTemplate,
+    })
   }, [settings])
 
-  const slugPreview = previewSlug(form.slugTemplate)
-  const displayNamePreview = renderTemplate(form.displayNameTemplate).trim()
+  const slugPreview = form ? previewSlug(form.slugTemplate) : ''
+  const displayNamePreview = form ? renderTemplate(form.displayNameTemplate).trim() : ''
   const placeholders = settings?.supportedPlaceholders ?? Object.keys(PREVIEW_OWNER)
 
   const runBackfill = async (dryRun: boolean) => {
@@ -101,6 +105,9 @@ export function AdminSettingsPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
+    if (!form) {
+      return
+    }
     if (!form.slugTemplate.trim() || !form.displayNameTemplate.trim()) {
       toast.error(t('adminSettings.validationTitle'), t('adminSettings.validationTemplateRequired'))
       return
@@ -132,7 +139,7 @@ export function AdminSettingsPage() {
           </p>
         </div>
 
-        {isLoading ? (
+        {isLoading || !form ? (
           <div className="text-sm text-muted-foreground">{t('adminSettings.loading')}</div>
         ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -140,9 +147,15 @@ export function AdminSettingsPage() {
               <Label htmlFor="personal-namespace-enabled">{t('adminSettings.enabledLabel')}</Label>
               <Select
                 value={form.enabled ? 'enabled' : 'disabled'}
-                onValueChange={(value) =>
-                  setForm((current) => ({ ...current, enabled: value === 'enabled' }))
-                }
+                onValueChange={(value) => {
+                  // Ignore anything that is not a real choice; see the note on `form`.
+                  if (value !== 'enabled' && value !== 'disabled') {
+                    return
+                  }
+                  setForm((current) =>
+                    current ? { ...current, enabled: value === 'enabled' } : current,
+                  )
+                }}
               >
                 <SelectTrigger id="personal-namespace-enabled">
                   <SelectValue />
@@ -161,7 +174,9 @@ export function AdminSettingsPage() {
                 value={form.slugTemplate}
                 disabled={!form.enabled}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, slugTemplate: event.target.value }))
+                  setForm((current) =>
+                    current ? { ...current, slugTemplate: event.target.value } : current,
+                  )
                 }
               />
               <p className="text-xs text-muted-foreground">
@@ -182,7 +197,9 @@ export function AdminSettingsPage() {
                 value={form.displayNameTemplate}
                 disabled={!form.enabled}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, displayNameTemplate: event.target.value }))
+                  setForm((current) =>
+                    current ? { ...current, displayNameTemplate: event.target.value } : current,
+                  )
                 }
               />
               <p className="text-xs text-muted-foreground">
