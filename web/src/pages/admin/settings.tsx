@@ -29,6 +29,13 @@ import {
   useDefaultNamespaces,
   useUpdateDefaultNamespaces,
 } from '@/features/admin/use-default-namespaces'
+import { useAdminNamespaces } from '@/features/admin/use-admin-namespaces'
+
+/**
+ * Upper bound on the namespaces offered as choices. Beyond this the list is
+ * reported as partial rather than silently cut.
+ */
+const NAMESPACE_CHOICE_LIMIT = 200
 
 /**
  * Sample account used for the live template preview.
@@ -65,18 +72,42 @@ export function AdminSettingsPage() {
   const [backfill, setBackfill] = useState<PersonalNamespaceBackfillResult | null>(null)
 
   const { data: defaults, isLoading: defaultsLoading } = useDefaultNamespaces()
+  const { data: namespacePage, isLoading: namespacesLoading } = useAdminNamespaces({
+    status: 'ACTIVE',
+    page: 0,
+    size: NAMESPACE_CHOICE_LIMIT,
+  })
   const updateDefaultsMutation = useUpdateDefaultNamespaces()
   const defaultsBackfillMutation = useBackfillDefaultNamespaces()
   // Null until loaded, for the same reason as `form` below.
-  const [defaultSlugs, setDefaultSlugs] = useState<string | null>(null)
+  const [defaultSlugs, setDefaultSlugs] = useState<string[] | null>(null)
   const [defaultsBackfill, setDefaultsBackfill] = useState<DefaultNamespaceBackfillResult | null>(null)
 
   useEffect(() => {
     if (!defaults) {
       return
     }
-    setDefaultSlugs((current) => current ?? defaults.slugs.join(', '))
+    setDefaultSlugs((current) => current ?? defaults.slugs)
   }, [defaults])
+
+  const namespaceChoices = namespacePage?.items.map((item) => item.slug) ?? []
+  // A slug can be configured and yet missing here — the namespace was deleted, archived or
+  // renamed. Surface it as its own choice rather than dropping it silently on the next save.
+  const staleSlugs = (defaultSlugs ?? []).filter((slug) => !namespaceChoices.includes(slug))
+  const namespaceOptions = [...namespaceChoices, ...staleSlugs]
+  const namespacesTruncated = (namespacePage?.total ?? 0) > namespaceChoices.length
+
+  const toggleDefaultSlug = (slug: string, checked: boolean) => {
+    setDefaultSlugs((current) => {
+      if (current === null) {
+        return current
+      }
+      if (checked) {
+        return current.includes(slug) ? current : [...current, slug]
+      }
+      return current.filter((value) => value !== slug)
+    })
+  }
 
   // Null until the server answers. The form must not mount before then: Radix's
   // Select keeps a hidden native <select> for form integration whose <option>s
@@ -130,13 +161,9 @@ export function AdminSettingsPage() {
     if (defaultSlugs === null) {
       return
     }
-    const slugs = defaultSlugs
-      .split(',')
-      .map((slug) => slug.trim())
-      .filter((slug) => slug.length > 0)
     try {
-      const saved = await updateDefaultsMutation.mutateAsync(slugs)
-      setDefaultSlugs(saved.slugs.join(', '))
+      const saved = await updateDefaultsMutation.mutateAsync(defaultSlugs)
+      setDefaultSlugs(saved.slugs)
       setDefaultsBackfill(null)
       toast.success(t('adminSettings.saveSuccessTitle'), t('adminSettings.defaultsSaveDescription'))
     } catch (error) {
@@ -287,18 +314,46 @@ export function AdminSettingsPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t('adminSettings.defaultsDescription')}</p>
         </div>
 
-        {defaultsLoading || defaultSlugs === null ? (
+        {defaultsLoading || namespacesLoading || defaultSlugs === null ? (
           <div className="text-sm text-muted-foreground">{t('adminSettings.loading')}</div>
         ) : (
           <form className="space-y-4" onSubmit={saveDefaults}>
             <div className="grid gap-2">
-              <Label htmlFor="default-namespaces">{t('adminSettings.defaultsLabel')}</Label>
-              <Input
-                id="default-namespaces"
-                value={defaultSlugs}
-                placeholder="global, musee"
-                onChange={(event) => setDefaultSlugs(event.target.value)}
-              />
+              <span className="text-sm font-medium">{t('adminSettings.defaultsLabel')}</span>
+              {namespaceOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('adminSettings.defaultsNoNamespaces')}</p>
+              ) : (
+                <div
+                  id="default-namespaces"
+                  className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border/60 p-3"
+                >
+                  {namespaceOptions.map((slug) => {
+                    const missing = staleSlugs.includes(slug)
+                    return (
+                      <label
+                        key={slug}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-secondary/60"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 shrink-0 accent-primary"
+                          checked={defaultSlugs.includes(slug)}
+                          onChange={(event) => toggleDefaultSlug(slug, event.target.checked)}
+                        />
+                        <span className="font-mono text-sm">{slug}</span>
+                        {missing ? (
+                          <span className="text-xs text-destructive">
+                            {t('adminSettings.defaultsMissingNamespace')}
+                          </span>
+                        ) : null}
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              {namespacesTruncated ? (
+                <p className="text-xs text-muted-foreground">{t('adminSettings.defaultsTruncated')}</p>
+              ) : null}
               <p className="text-xs text-muted-foreground">{t('adminSettings.defaultsHint')}</p>
             </div>
             <div className="flex flex-wrap justify-end gap-3">
