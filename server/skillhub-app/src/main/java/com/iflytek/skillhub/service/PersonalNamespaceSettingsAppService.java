@@ -6,7 +6,7 @@ import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillEntry;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillReport;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceProvisioningService;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceSettings;
-import com.iflytek.skillhub.dto.PersonalNamespaceBackfillRequest;
+import com.iflytek.skillhub.dto.BackfillRequest;
 import com.iflytek.skillhub.dto.PersonalNamespaceBackfillResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsUpdateRequest;
@@ -73,7 +73,7 @@ public class PersonalNamespaceSettingsAppService {
      * Runs the backfill over existing accounts. A dry run writes nothing and is not audited; an
      * applied run records what it created.
      */
-    public PersonalNamespaceBackfillResponse backfill(PersonalNamespaceBackfillRequest request,
+    public PersonalNamespaceBackfillResponse backfill(BackfillRequest request,
                                                       String actorUserId,
                                                       AuditRequestContext auditContext) {
         boolean dryRun = Boolean.TRUE.equals(request.dryRun());

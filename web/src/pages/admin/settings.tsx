@@ -14,12 +14,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table'
-import type { PersonalNamespaceBackfillResult, PersonalNamespaceSettingsInput } from '@/api/types'
+import type {
+  DefaultNamespaceBackfillResult,
+  PersonalNamespaceBackfillResult,
+  PersonalNamespaceSettingsInput,
+} from '@/api/types'
 import {
   useBackfillPersonalNamespaces,
   usePersonalNamespaceSettings,
   useUpdatePersonalNamespaceSettings,
 } from '@/features/admin/use-personal-namespace-settings'
+import {
+  useBackfillDefaultNamespaces,
+  useDefaultNamespaces,
+  useUpdateDefaultNamespaces,
+} from '@/features/admin/use-default-namespaces'
 
 /**
  * Sample account used for the live template preview.
@@ -54,6 +63,20 @@ export function AdminSettingsPage() {
   const updateMutation = useUpdatePersonalNamespaceSettings()
   const backfillMutation = useBackfillPersonalNamespaces()
   const [backfill, setBackfill] = useState<PersonalNamespaceBackfillResult | null>(null)
+
+  const { data: defaults, isLoading: defaultsLoading } = useDefaultNamespaces()
+  const updateDefaultsMutation = useUpdateDefaultNamespaces()
+  const defaultsBackfillMutation = useBackfillDefaultNamespaces()
+  // Null until loaded, for the same reason as `form` below.
+  const [defaultSlugs, setDefaultSlugs] = useState<string | null>(null)
+  const [defaultsBackfill, setDefaultsBackfill] = useState<DefaultNamespaceBackfillResult | null>(null)
+
+  useEffect(() => {
+    if (!defaults) {
+      return
+    }
+    setDefaultSlugs((current) => current ?? defaults.slugs.join(', '))
+  }, [defaults])
 
   // Null until the server answers. The form must not mount before then: Radix's
   // Select keeps a hidden native <select> for form integration whose <option>s
@@ -101,6 +124,48 @@ export function AdminSettingsPage() {
   const plannedCount = backfill?.dryRun
     ? backfill.entries.filter((entry) => entry.outcome === 'PLANNED').length
     : 0
+
+  const saveDefaults = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (defaultSlugs === null) {
+      return
+    }
+    const slugs = defaultSlugs
+      .split(',')
+      .map((slug) => slug.trim())
+      .filter((slug) => slug.length > 0)
+    try {
+      const saved = await updateDefaultsMutation.mutateAsync(slugs)
+      setDefaultSlugs(saved.slugs.join(', '))
+      setDefaultsBackfill(null)
+      toast.success(t('adminSettings.saveSuccessTitle'), t('adminSettings.defaultsSaveDescription'))
+    } catch (error) {
+      toast.error(
+        t('adminSettings.saveErrorTitle'),
+        error instanceof Error ? error.message : t('adminSettings.fallbackErrorDescription'),
+      )
+    }
+  }
+
+  const runDefaultsBackfill = async (dryRun: boolean) => {
+    try {
+      const result = await defaultsBackfillMutation.mutateAsync(dryRun)
+      setDefaultsBackfill(result)
+      if (!dryRun) {
+        toast.success(
+          t('adminSettings.backfillDoneTitle'),
+          t('adminSettings.defaultsBackfillDoneDescription', { count: result.entries.length }),
+        )
+      }
+    } catch (error) {
+      toast.error(
+        t('adminSettings.backfillErrorTitle'),
+        error instanceof Error ? error.message : t('adminSettings.fallbackErrorDescription'),
+      )
+    }
+  }
+
+  const defaultsPlannedCount = defaultsBackfill?.dryRun ? defaultsBackfill.entries.length : 0
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -212,6 +277,101 @@ export function AdminSettingsPage() {
                 {updateMutation.isPending ? t('adminSettings.saving') : t('adminSettings.saveAction')}
               </Button>
             </div>
+          </form>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold font-heading">{t('adminSettings.defaultsTitle')}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t('adminSettings.defaultsDescription')}</p>
+        </div>
+
+        {defaultsLoading || defaultSlugs === null ? (
+          <div className="text-sm text-muted-foreground">{t('adminSettings.loading')}</div>
+        ) : (
+          <form className="space-y-4" onSubmit={saveDefaults}>
+            <div className="grid gap-2">
+              <Label htmlFor="default-namespaces">{t('adminSettings.defaultsLabel')}</Label>
+              <Input
+                id="default-namespaces"
+                value={defaultSlugs}
+                placeholder="global, musee"
+                onChange={(event) => setDefaultSlugs(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('adminSettings.defaultsHint')}</p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button type="submit" disabled={updateDefaultsMutation.isPending}>
+                {updateDefaultsMutation.isPending
+                  ? t('adminSettings.saving')
+                  : t('adminSettings.saveAction')}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-3 border-t border-border/60 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={defaultsBackfillMutation.isPending}
+                onClick={() => runDefaultsBackfill(true)}
+              >
+                {t('adminSettings.backfillPreviewAction')}
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  defaultsBackfillMutation.isPending ||
+                  !defaultsBackfill?.dryRun ||
+                  defaultsPlannedCount === 0
+                }
+                onClick={() => runDefaultsBackfill(false)}
+              >
+                {t('adminSettings.defaultsBackfillApplyAction', { count: defaultsPlannedCount })}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('adminSettings.defaultsBackfillHint')}</p>
+
+            {defaultsBackfill ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {t('adminSettings.defaultsBackfillSummary', {
+                    scanned: defaultsBackfill.scannedAccounts,
+                    already: defaultsBackfill.alreadyEnrolled,
+                    acted: defaultsBackfill.entries.length,
+                  })}
+                </p>
+                {defaultsBackfill.truncated ? (
+                  <p className="text-sm font-medium text-foreground">
+                    {t('adminSettings.backfillTruncated')}
+                  </p>
+                ) : null}
+                {defaultsBackfill.entries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t('adminSettings.defaultsBackfillNothingToDo')}
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('adminSettings.backfillColumnUser')}</TableHead>
+                          <TableHead>{t('adminSettings.defaultsColumnSlugs')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {defaultsBackfill.entries.map((entry) => (
+                          <TableRow key={entry.userId}>
+                            <TableCell>{entry.displayName || entry.userId}</TableCell>
+                            <TableCell className="font-mono text-xs">{entry.slugs.join(', ')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </form>
         )}
       </Card>

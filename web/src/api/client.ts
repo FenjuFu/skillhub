@@ -50,6 +50,8 @@ import type {
   PersonalNamespaceSettings,
   PersonalNamespaceSettingsInput,
   PersonalNamespaceBackfillResult,
+  DefaultNamespaceSettings,
+  DefaultNamespaceBackfillResult,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -1468,6 +1470,29 @@ export const adminApi = {
   async backfillPersonalNamespaces(dryRun: boolean): Promise<PersonalNamespaceBackfillResult> {
     return fetchJson<PersonalNamespaceBackfillResult>(
       '/api/v1/admin/settings/personal-namespace/backfill',
+      {
+        method: 'POST',
+        headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ dryRun }),
+      },
+    )
+  },
+
+  async getDefaultNamespaces(): Promise<DefaultNamespaceSettings> {
+    return fetchJson<DefaultNamespaceSettings>('/api/v1/admin/settings/default-namespaces')
+  },
+
+  async updateDefaultNamespaces(slugs: string[]): Promise<DefaultNamespaceSettings> {
+    return fetchJson<DefaultNamespaceSettings>('/api/v1/admin/settings/default-namespaces', {
+      method: 'PUT',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ slugs }),
+    })
+  },
+
+  async backfillDefaultNamespaces(dryRun: boolean): Promise<DefaultNamespaceBackfillResult> {
+    return fetchJson<DefaultNamespaceBackfillResult>(
+      '/api/v1/admin/settings/default-namespaces/backfill',
       {
         method: 'POST',
         headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),

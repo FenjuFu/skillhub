@@ -5,7 +5,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.event.UserActivatedEvent;
-import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
+import com.iflytek.skillhub.domain.namespace.DefaultNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
@@ -42,7 +42,7 @@ public class LocalAuthService {
     private final LocalCredentialRepository credentialRepository;
     private final UserAccountRepository userAccountRepository;
     private final UserRoleBindingRepository userRoleBindingRepository;
-    private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
+    private final DefaultNamespaceMembershipService defaultNamespaceMembershipService;
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
@@ -51,7 +51,7 @@ public class LocalAuthService {
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
                             UserRoleBindingRepository userRoleBindingRepository,
-                            GlobalNamespaceMembershipService globalNamespaceMembershipService,
+                            DefaultNamespaceMembershipService defaultNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
                             Clock clock,
@@ -59,7 +59,7 @@ public class LocalAuthService {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
-        this.globalNamespaceMembershipService = globalNamespaceMembershipService;
+        this.defaultNamespaceMembershipService = defaultNamespaceMembershipService;
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
@@ -104,7 +104,7 @@ public class LocalAuthService {
             normalizedUsername,
             passwordEncoder.encode(password)
         ));
-        globalNamespaceMembershipService.ensureMember(user.getId());
+        defaultNamespaceMembershipService.ensureMember(user.getId());
         eventPublisher.publishEvent(new UserActivatedEvent(user.getId(), normalizedUsername, normalizedEmail));
 
         return buildPrincipal(user);

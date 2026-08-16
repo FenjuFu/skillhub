@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const usePersonalNamespaceSettingsMock = vi.fn()
+const useDefaultNamespacesMock = vi.fn()
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -27,6 +28,12 @@ vi.mock('@/features/admin/use-personal-namespace-settings', () => ({
   usePersonalNamespaceSettings: () => usePersonalNamespaceSettingsMock(),
   useUpdatePersonalNamespaceSettings: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useBackfillPersonalNamespaces: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/features/admin/use-default-namespaces', () => ({
+  useDefaultNamespaces: () => useDefaultNamespacesMock(),
+  useUpdateDefaultNamespaces: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useBackfillDefaultNamespaces: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 import { AdminSettingsPage, previewSlug, renderTemplate } from './settings'
@@ -62,6 +69,10 @@ describe('AdminSettingsPage', () => {
         displayNameTemplate: '${username}',
         supportedPlaceholders: ['username', 'email_prefix', 'user_id'],
       },
+      isLoading: false,
+    })
+    useDefaultNamespacesMock.mockReturnValue({
+      data: { slugs: ['global', 'musee'] },
       isLoading: false,
     })
   })
@@ -110,13 +121,23 @@ describe('AdminSettingsPage', () => {
     render(<AdminSettingsPage />)
 
     expect(await screen.findByText('adminSettings.backfillTitle')).toBeDefined()
-    expect(screen.getByRole('button', { name: 'adminSettings.backfillPreviewAction' })).toBeDefined()
+    // One preview button per backfill: default namespaces, and personal namespaces.
+    expect(screen.getAllByRole('button', { name: 'adminSettings.backfillPreviewAction' })).toHaveLength(2)
   })
 
   it('keeps the apply button disabled until a preview has been run', async () => {
     render(<AdminSettingsPage />)
 
-    const apply = await screen.findByRole('button', { name: /backfillApplyAction/ })
+    const apply = await screen.findByRole('button', { name: /adminSettings.backfillApplyAction/ })
     expect((apply as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('shows the configured default namespaces the server returned', async () => {
+    render(<AdminSettingsPage />)
+
+    const input = (await screen.findByLabelText('adminSettings.defaultsLabel')) as HTMLInputElement
+    await waitFor(() => {
+      expect(input.value).toBe('global, musee')
+    })
   })
 })
