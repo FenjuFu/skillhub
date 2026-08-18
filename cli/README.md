@@ -32,6 +32,9 @@ skillhub list
 
 # Publish skill
 skillhub publish ./my-skill --namespace myspace
+
+# Synchronize a team workspace
+skillhub sync pull --namespace myspace
 ```
 
 ## 🌐 Registry Configuration
@@ -229,10 +232,44 @@ For a custom path or an unsupported Agent directory, use `--dir` to specify the 
   "namespace": "global",
   "slug": "pdf-parser",
   "version": "1.0.0",
+  "fingerprint": "sha256:...",
+  "source": "skillhub",
   "agent": "codex",
   "installedAt": "2026-04-28T06:00:00.000Z"
 }
 ```
+
+## 🔄 Namespace Workspaces
+
+Use namespace synchronization when an Agent workspace should maintain all installable skills from one team space.
+
+```bash
+# Pull new and updated skills into ./.agents/skills
+skillhub sync pull --namespace team-a
+
+# Use an explicit workspace directory
+skillhub sync pull --namespace team-a --dir ./.claude/skills
+
+# Check without downloading
+skillhub sync pull --namespace team-a --check
+
+# Show local edits and remote updates
+skillhub sync status --namespace team-a --json
+skillhub sync diff --namespace team-a
+
+# Remove only unchanged SkillHub-managed skills that no longer exist remotely
+skillhub sync pull --namespace team-a --prune
+
+# Validate and upload every local skill for review
+skillhub sync push --all --namespace team-a --dry-run
+skillhub sync push --all --namespace team-a --submit-review
+```
+
+The default workspace is `<cwd>/.agents/skills`. Pull never overwrites local changes unless `--force` is supplied. Remote removals are reported as `orphaned` and are retained unless `--prune` is supplied. Both destructive cases still require explicit flags.
+
+Workspace push is non-overwriting: an existing namespace/slug/version is reported as a conflict, including versions that are still uploaded or pending review. Other skills in the same `--all` run continue processing.
+
+Namespace sync writes `.skillhub/namespace-sync.json` in the workspace and per-skill `.skillhub/metadata.json` files. These files contain the registry coordinate, published version, aggregate fingerprint, and file hashes used by `status` and `diff`.
 
 ## 📋 Local Management
 

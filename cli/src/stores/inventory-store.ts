@@ -14,6 +14,7 @@ export interface InventoryItem {
   namespace: string
   slug: string
   version: string
+  fingerprint?: string
   targets: InventoryTarget[]
 }
 
@@ -117,17 +118,19 @@ export class InventoryStore {
     namespace: string,
     slug: string,
     version: string,
-    target: InventoryTarget
+    target: InventoryTarget,
+    fingerprint?: string
   ): Promise<void> {
     const inventory = await this.read()
-    let item = inventory.items.find(
+    const existing = inventory.items.find(
       i => i.registry === registry && i.namespace === namespace && i.slug === slug
     )
-    if (!item) {
-      item = { registry, namespace, slug, version, targets: [] }
+    const item: InventoryItem = existing ?? { registry, namespace, slug, version, targets: [] }
+    if (!existing) {
       inventory.items.push(item)
     }
     item.version = version
+    if (fingerprint !== undefined) item.fingerprint = fingerprint
     const existingIdx = item.targets.findIndex(t => t.installDir === target.installDir)
     if (existingIdx >= 0) {
       item.targets[existingIdx] = target
@@ -164,5 +167,31 @@ export class InventoryStore {
       await this.writeAtomic(inventory)
     }
     return removed
+  }
+
+  async replaceTargetAtInstallDir(
+    registry: string,
+    namespace: string,
+    slug: string,
+    version: string,
+    target: InventoryTarget,
+    fingerprint?: string
+  ): Promise<void> {
+    const inventory = await this.read()
+    for (const item of inventory.items) {
+      item.targets = item.targets.filter(existing => existing.installDir !== target.installDir)
+    }
+    inventory.items = inventory.items.filter(item => item.targets.length > 0)
+
+    let item = inventory.items.find(candidate =>
+      candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
+    if (!item) {
+      item = { registry, namespace, slug, version, targets: [] }
+      inventory.items.push(item)
+    }
+    item.version = version
+    if (fingerprint !== undefined) item.fingerprint = fingerprint
+    item.targets.push(target)
+    await this.writeAtomic(inventory)
   }
 }

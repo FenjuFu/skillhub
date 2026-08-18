@@ -228,6 +228,27 @@ describe('installSkill', () => {
     expect(inventory.items[0].targets[0].installDir).toBe(skillDir)
   })
 
+  test('force restores the old installation when inventory persistence fails', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Old')
+    const invalidHome = join(rootDir, 'home-is-a-file')
+    await writeFile(invalidHome, 'not a directory')
+
+    await expect(installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: true,
+      home: invalidHome
+    })).rejects.toThrow()
+
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Old')
+  })
+
   test('rejects downloads whose content-length exceeds the package limit', async () => {
     globalThis.fetch = installFetchWithDownloadResponse(new Response(new Uint8Array(0), {
       status: 200,
