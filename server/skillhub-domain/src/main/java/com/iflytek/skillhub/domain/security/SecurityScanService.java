@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -86,21 +84,9 @@ public class SecurityScanService {
                 System.currentTimeMillis(),
                 Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
         );
-        // Publish the scan task only after this transaction commits, so the
-        // stream consumer cannot observe the task before the skill_version /
-        // security_audit rows are visible (issue #612). On rollback the task
-        // is never published. Fall back to inline publish if somehow called
-        // outside a transaction.
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    scanTaskProducer.publishScanTask(scanTask);
-                }
-            });
-        } else {
-            scanTaskProducer.publishScanTask(scanTask);
-        }
+        // The stream consumer must not observe this task before skill_version /
+        // security_audit rows are committed and visible.
+        TransactionCommitCallbacks.afterCommitOrNow(() -> scanTaskProducer.publishScanTask(scanTask));
         // Only transition to SCANNING if the version is not already published (auto-publish flow)
         if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
             version.setStatus(SkillVersionStatus.SCANNING);
