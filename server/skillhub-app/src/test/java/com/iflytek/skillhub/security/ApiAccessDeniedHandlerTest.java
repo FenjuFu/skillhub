@@ -38,6 +38,7 @@ class ApiAccessDeniedHandlerTest {
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
+        messageSource.setFallbackToSystemLocale(false);
         messageSource.setBasename("messages");
         messageSource.setDefaultEncoding("UTF-8");
         RequestIdAccessor requestIdAccessor = new RequestIdAccessor();
