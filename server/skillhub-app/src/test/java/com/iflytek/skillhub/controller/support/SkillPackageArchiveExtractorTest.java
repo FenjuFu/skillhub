@@ -130,6 +130,25 @@ class SkillPackageArchiveExtractorTest {
     }
 
     @Test
+    void skipsWindowsStyleDirectoryEntries() throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            zos.putNextEntry(new ZipEntry("my-skill\\"));
+            zos.closeEntry();
+            zos.putNextEntry(new ZipEntry("my-skill\\SKILL.md"));
+            zos.write("---\nname: test\n---".getBytes());
+            zos.closeEntry();
+        }
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.zip", "application/zip", baos.toByteArray());
+
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertEquals(1, entries.size());
+        assertEquals("SKILL.md", entries.get(0).path());
+    }
+
+    @Test
     void doesNotStripWhenMultipleRootDirectories() throws Exception {
         byte[] zipBytes = createZip(Map.of(
                 "dir-a/SKILL.md", "---\nname: test\n---\n".getBytes(),
