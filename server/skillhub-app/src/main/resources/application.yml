@@ -13,6 +13,7 @@ server:
 spring:
   messages:
     basename: messages
+    fallback-to-system-locale: false
   application:
     name: skillhub
   lifecycle:
