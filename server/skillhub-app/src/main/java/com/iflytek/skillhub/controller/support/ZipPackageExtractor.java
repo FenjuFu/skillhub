@@ -40,7 +40,7 @@ public class ZipPackageExtractor {
         try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
             ZipEntry zipEntry;
             while ((zipEntry = zis.getNextEntry()) != null) {
-                if (zipEntry.isDirectory()) {
+                if (SkillPackageArchiveExtractor.isDirectoryEntry(zipEntry)) {
                     zis.closeEntry();
                     continue;
                 }

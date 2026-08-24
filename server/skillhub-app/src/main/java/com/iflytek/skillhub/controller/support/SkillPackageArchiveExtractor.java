@@ -44,7 +44,7 @@ public class SkillPackageArchiveExtractor {
         try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
             ZipEntry zipEntry;
             while ((zipEntry = zis.getNextEntry()) != null) {
-                if (zipEntry.isDirectory()) {
+                if (isDirectoryEntry(zipEntry)) {
                     zis.closeEntry();
                     continue;
                 }
@@ -162,6 +162,14 @@ public class SkillPackageArchiveExtractor {
         }
 
         return new ExtractionResult(promoted, warnings);
+    }
+
+    /**
+     * {@link ZipEntry#isDirectory()} only recognizes the ZIP-standard forward slash. Some Windows
+     * archive tools emit directory entries whose names end in a backslash instead.
+     */
+    static boolean isDirectoryEntry(ZipEntry entry) {
+        return entry.isDirectory() || entry.getName().endsWith("\\");
     }
 
     private static boolean isOsMetadataEntry(String name) {

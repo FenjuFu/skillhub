@@ -32,6 +32,26 @@ class ZipPackageExtractorTest {
         assertTrue(entries.stream().noneMatch(e -> e.path().equals("skill.md")));
     }
 
+    @Test
+    void skipsWindowsStyleDirectoryEntries() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(new SkillPublishProperties());
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            zos.putNextEntry(new ZipEntry("my-skill\\"));
+            zos.closeEntry();
+            zos.putNextEntry(new ZipEntry("my-skill/SKILL.md"));
+            zos.write("---\nname: test\n---\n".getBytes());
+            zos.closeEntry();
+        }
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.zip", "application/zip", baos.toByteArray());
+
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertEquals(1, entries.size());
+        assertEquals("SKILL.md", entries.get(0).path());
+    }
+
     private byte[] createZip(Map<String, byte[]> entries) throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
