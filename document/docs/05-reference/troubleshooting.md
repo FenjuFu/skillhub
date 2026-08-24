@@ -22,6 +22,14 @@ description: 常见问题诊断和解决方案
 - Redis 连接失败
 - 环境变量缺失
 
+### PostgreSQL 容器启动报 `operation not permitted`（写 `postmaster.pid` / `pg_wal` 失败）
+
+内网/自建环境使用绑定挂载时常见，根因是**数据卷目录权限**与容器内 `postgres` 用户（UID 999）不匹配：
+
+1. 将数据卷目录属主改为 postgres 用户：`chown -R 999:999 <数据目录>`。
+2. 在 RHEL/CentOS 上检查 SELinux 是否拦截了容器写入宿主目录。
+3. 推荐直接使用官方 `runtime.sh` 部署脚本，它会处理相关初始化步骤，避免手工编写 compose 时漏配权限。
+
 ## 上传失败
 
 ### 技能包上传失败

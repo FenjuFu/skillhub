@@ -34,6 +34,17 @@ description: 常见问题解答
 3. 是否包含必需的 SKILL.md
 4. SKILL.md frontmatter 格式是否正确
 
+### 使用 CLI 安装技能时报 `namespace not found`？
+
+多数情况是 CLI 没有指向你自己的 SkillHub 实例，或命名空间格式不对：
+
+1. **配置 registry 并登录**：用环境变量或 `--registry` 指向你的实例，例如
+   `clawhub --registry https://skillhub.your-company.com install <skill>`；登录需要先在 Web 控制台生成 API Token。
+2. **命名空间 slug 格式**：全局命名空间的技能直接用名字（如 `my-skill`）；团队命名空间要用 `team--skill` 的形式（`@team/skill` → `team--skill`）。
+3. 最稳妥的方式是直接在 SkillHub Web 界面点技能的「安装」按钮，复制其中已经带好正确 registry 与命名空间的命令。
+
+> SkillHub 同时提供 `clawhub` 和 `skillhub` 两种 CLI，用法见各自 README；通过 OpenClaw 对话安装技能时，底层同样调用 CLI。
+
 ## 开发相关
 
 ### 如何扩展 OAuth Provider？
