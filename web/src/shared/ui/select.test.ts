@@ -40,6 +40,14 @@ describe('shared select contract', () => {
     expect(SELECT_ITEM_CLASS_NAME).toContain('rounded-md')
   })
 
+  it('keeps long option lists inside the available viewport', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).toContain(
+      'max-h-[var(--radix-select-content-available-height)]'
+    )
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-y-auto')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-x-hidden')
+  })
+
   it('uses pointer cursors for expanded select interactions', () => {
     expect(SELECT_ITEM_CLASS_NAME).toContain('cursor-pointer')
     expect(SELECT_SCROLL_BUTTON_CLASS_NAME).toContain('cursor-pointer')
