@@ -12,7 +12,7 @@ export const SELECT_TRIGGER_CLASS_NAME = cn(
 )
 
 export const SELECT_CONTENT_CLASS_NAME = cn(
-  'z-50 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
+  'z-50 max-h-[var(--radix-select-content-available-height)] overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
   // In-tree (no Portal): avoids React 19 removeChild races on route unmount.
   // No exit animations: delayed unmount still races commits when Content was portaled.
   'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
