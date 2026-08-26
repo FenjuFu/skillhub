@@ -64,6 +64,7 @@ with the Skill's source and the problem it solves, or submit a PR by following t
 
 - 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
 - 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
+- 🐍 **[Python Examples](./examples/python)** — Search, download, and publish skills from Python via the REST API
 
 ## Highlights
 
