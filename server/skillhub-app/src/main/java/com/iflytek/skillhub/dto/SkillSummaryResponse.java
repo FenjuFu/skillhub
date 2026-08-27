@@ -58,7 +58,7 @@ public record SkillSummaryResponse(
             String resolutionMode,
             ComplianceSnapshotResponse complianceSnapshot) {
         this(id, slug, displayName, summary, visibility, status, downloadCount, starCount, ratingAvg,
-                ratingCount, namespace, updatedAt, canSubmitPromotion, headlineVersion, publishedVersion,
+                ratingCount, namespace, updatedAt, null, null, canSubmitPromotion, headlineVersion, publishedVersion,
                 ownerPreviewVersion, resolutionMode, complianceSnapshot, null);
     }
 

@@ -273,7 +273,8 @@ public class SkillSearchAppService {
                 projection.resolutionMode().name(),
                 headlineVersion != null
                         ? complianceSnapshotProjectionService.fromParsedMetadataJson(headlineVersion.parsedMetadataJson())
-                        : null
+                        : null,
+                null
         );
     }
 
