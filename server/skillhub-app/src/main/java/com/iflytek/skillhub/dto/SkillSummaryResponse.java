@@ -62,6 +62,33 @@ public record SkillSummaryResponse(
                 ownerPreviewVersion, resolutionMode, complianceSnapshot, null);
     }
 
+    /** Summary with owner information but without an optional label projection. */
+    public SkillSummaryResponse(
+            Long id,
+            String slug,
+            String displayName,
+            String summary,
+            String visibility,
+            String status,
+            Long downloadCount,
+            Integer starCount,
+            BigDecimal ratingAvg,
+            Integer ratingCount,
+            String namespace,
+            Instant updatedAt,
+            String ownerId,
+            String ownerDisplayName,
+            boolean canSubmitPromotion,
+            SkillLifecycleVersionResponse headlineVersion,
+            SkillLifecycleVersionResponse publishedVersion,
+            SkillLifecycleVersionResponse ownerPreviewVersion,
+            String resolutionMode,
+            ComplianceSnapshotResponse complianceSnapshot) {
+        this(id, slug, displayName, summary, visibility, status, downloadCount, starCount, ratingAvg,
+                ratingCount, namespace, updatedAt, ownerId, ownerDisplayName, canSubmitPromotion,
+                headlineVersion, publishedVersion, ownerPreviewVersion, resolutionMode, complianceSnapshot, null);
+    }
+
     public SkillSummaryResponse withLabels(List<SkillLabelDto> labels) {
         return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
                 starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
