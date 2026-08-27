@@ -64,7 +64,8 @@ public record SkillSummaryResponse(
 
     public SkillSummaryResponse withLabels(List<SkillLabelDto> labels) {
         return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
-                starCount, ratingAvg, ratingCount, namespace, updatedAt, canSubmitPromotion, headlineVersion,
+                starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
+                canSubmitPromotion, headlineVersion,
                 publishedVersion, ownerPreviewVersion, resolutionMode, complianceSnapshot, labels);
     }
 }
