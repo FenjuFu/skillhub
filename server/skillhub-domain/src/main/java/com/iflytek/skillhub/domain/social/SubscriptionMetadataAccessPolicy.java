@@ -5,18 +5,37 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.user.UserAccount;
 
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Authorization for metadata exposed by subscriptions and subscriber notifications. */
 @Component
 public class SubscriptionMetadataAccessPolicy {
+    private final VisibilityChecker visibilityChecker;
+
+    public SubscriptionMetadataAccessPolicy() {
+        this(new VisibilityChecker());
+    }
+
+    @Autowired
+    public SubscriptionMetadataAccessPolicy(VisibilityChecker visibilityChecker) {
+        this.visibilityChecker = visibilityChecker;
+    }
 
     public boolean canAccessCurrent(Skill skill, Namespace namespace, UserAccount account,
                                     Map<Long, NamespaceRole> namespaceRoles) {
-        return canAccess(skill, namespace, account, namespaceRoles, false);
+        if (account == null || !account.isActive() || namespace == null) {
+            return false;
+        }
+        if (namespace.getStatus() == NamespaceStatus.ARCHIVED
+                && !isOwnerOrManager(skill, account, namespaceRoles)) {
+            return false;
+        }
+        return visibilityChecker.canAccess(skill, account.getId(), namespaceRoles);
     }
 
     public boolean canAccessYankedPublication(Skill skill, Namespace namespace, UserAccount account,
@@ -48,5 +67,14 @@ public class SubscriptionMetadataAccessPolicy {
             case NAMESPACE_ONLY -> role != null;
             case PRIVATE -> owner || manager;
         };
+    }
+
+    private boolean isOwnerOrManager(Skill skill, UserAccount account,
+                                     Map<Long, NamespaceRole> namespaceRoles) {
+        if (skill.getOwnerId().equals(account.getId())) {
+            return true;
+        }
+        NamespaceRole role = namespaceRoles == null ? null : namespaceRoles.get(skill.getNamespaceId());
+        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
     }
 }

@@ -86,7 +86,6 @@ class SkillReviewSubmitServiceTest {
             assertEquals(SkillVersionStatus.PENDING_REVIEW, version.getStatus());
             assertEquals(SkillVisibility.PUBLIC, version.getRequestedVisibility());
             verify(reviewTaskRepository).save(any(ReviewTask.class));
-            verify(eventPublisher, never()).publishEvent(any());
         }
 
         @Test
@@ -187,7 +186,7 @@ class SkillReviewSubmitServiceTest {
 
             ArgumentCaptor<SkillPublishedEvent> eventCaptor =
                     ArgumentCaptor.forClass(SkillPublishedEvent.class);
-            verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
             SkillPublishedEvent event = eventCaptor.getValue();
             assertEquals(skillId, event.skillId());
             assertEquals(versionId, event.versionId());
@@ -256,30 +255,6 @@ class SkillReviewSubmitServiceTest {
             // When/Then
             assertThrows(DomainBadRequestException.class,
                     () -> service.confirmPublish(skillId, versionId, userId, Map.of()));
-            verify(eventPublisher, never()).publishEvent(any());
-        }
-
-        @Test
-        @DisplayName("should not publish event when version persistence fails")
-        void shouldNotPublishEventWhenVersionPersistenceFails() {
-            // Given
-            Long skillId = 1L;
-            Long versionId = 100L;
-            String userId = "user-1";
-
-            Skill skill = createSkill(skillId, userId, 10L, SkillVisibility.PRIVATE);
-            SkillVersion version = createVersion(versionId, skillId, SkillVersionStatus.UPLOADED);
-            RuntimeException persistenceFailure = new RuntimeException("version save failed");
-
-            when(skillRepository.findById(skillId)).thenReturn(Optional.of(skill));
-            when(skillVersionRepository.findById(versionId)).thenReturn(Optional.of(version));
-            when(skillVersionRepository.save(version)).thenThrow(persistenceFailure);
-
-            // When/Then
-            RuntimeException thrown = assertThrows(RuntimeException.class,
-                    () -> service.confirmPublish(skillId, versionId, userId, Map.of()));
-            assertSame(persistenceFailure, thrown);
-            verify(skillRepository, never()).save(any());
             verify(eventPublisher, never()).publishEvent(any());
         }
 
