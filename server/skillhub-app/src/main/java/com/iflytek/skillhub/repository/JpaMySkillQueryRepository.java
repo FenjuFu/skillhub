@@ -9,6 +9,8 @@ import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import java.util.List;
@@ -16,6 +18,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Repository
 public class JpaMySkillQueryRepository implements MySkillQueryRepository {
@@ -23,13 +26,23 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
     private final NamespaceRepository namespaceRepository;
     private final PromotionRequestRepository promotionRequestRepository;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
+    private final UserAccountRepository userAccountRepository;
 
     public JpaMySkillQueryRepository(NamespaceRepository namespaceRepository,
                                      PromotionRequestRepository promotionRequestRepository,
                                      SkillLifecycleProjectionService skillLifecycleProjectionService) {
+        this(namespaceRepository, promotionRequestRepository, skillLifecycleProjectionService, null);
+    }
+
+    @Autowired
+    public JpaMySkillQueryRepository(NamespaceRepository namespaceRepository,
+                                     PromotionRequestRepository promotionRequestRepository,
+                                     SkillLifecycleProjectionService skillLifecycleProjectionService,
+                                     UserAccountRepository userAccountRepository) {
         this.namespaceRepository = namespaceRepository;
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
+        this.userAccountRepository = userAccountRepository;
     }
 
     @Override
@@ -41,14 +54,19 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                         skills.stream().map(Skill::getNamespaceId).distinct().toList())
                 .stream()
                 .collect(Collectors.toMap(Namespace::getId, Function.identity()));
+        Map<String, UserAccount> ownersById = userAccountRepository == null
+                ? Map.of()
+                : userAccountRepository.findByIdIn(skills.stream().map(Skill::getOwnerId).distinct().toList())
+                .stream().collect(Collectors.toMap(UserAccount::getId, Function.identity()));
         return skills.stream()
-                .map(skill -> toSummaryResponse(skill, currentUserId, namespacesById))
+                .map(skill -> toSummaryResponse(skill, currentUserId, namespacesById, ownersById))
                 .toList();
     }
 
     private SkillSummaryResponse toSummaryResponse(Skill skill,
                                                    String currentUserId,
-                                                   Map<Long, Namespace> namespacesById) {
+                                                   Map<Long, Namespace> namespacesById,
+                                                   Map<String, UserAccount> ownersById) {
         Namespace namespace = namespacesById.get(skill.getNamespaceId());
         SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForViewer(
                 skill,
@@ -75,11 +93,16 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                 skill.getRatingCount(),
                 namespace != null ? namespace.getSlug() : null,
                 skill.getUpdatedAt(),
+                skill.getOwnerId(),
+                ownersById.get(skill.getOwnerId()) != null
+                        ? ownersById.get(skill.getOwnerId()).getDisplayName()
+                        : null,
                 canSubmitPromotion(skill, publishedVersion, namespace),
                 toLifecycleVersion(headlineVersion),
                 toLifecycleVersion(publishedVersion),
                 toLifecycleVersion(ownerPreviewVersion),
                 projection.resolutionMode().name(),
+                null,
                 null
         );
     }
