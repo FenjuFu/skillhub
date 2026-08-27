@@ -13,6 +13,8 @@ import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
@@ -59,6 +61,9 @@ class SkillSearchAppServiceTest {
     @Mock
     private RbacService rbacService;
 
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
     private SkillSearchAppService service;
 
     @BeforeEach
@@ -69,7 +74,9 @@ class SkillSearchAppServiceTest {
                 namespaceRepository,
                 namespaceService,
                 new SkillLifecycleProjectionService(skillVersionRepository),
-                rbacService
+                new ComplianceSnapshotProjectionService(new com.fasterxml.jackson.databind.ObjectMapper()),
+                rbacService,
+                userAccountRepository
         );
     }
 
@@ -100,11 +107,14 @@ class SkillSearchAppServiceTest {
         when(skillRepository.findByIdIn(List.of(11L))).thenReturn(List.of(visibleSkill));
         when(namespaceRepository.findByIdIn(List.of(2L))).thenReturn(List.of(activeNamespace));
         when(skillVersionRepository.findByIdIn(List.of(111L))).thenReturn(List.of());
+        when(userAccountRepository.findByIdIn(List.of("owner-1")))
+                .thenReturn(List.of(new UserAccount("owner-1", "Alice", "alice@example.com", null)));
 
         SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 1, null, null);
 
         assertEquals(1, response.items().size());
         assertEquals("visible-skill", response.items().getFirst().slug());
+        assertEquals("Alice", response.items().getFirst().ownerDisplayName());
         assertEquals(1, response.total());
         verify(searchQueryService, times(1)).search(any());
     }
