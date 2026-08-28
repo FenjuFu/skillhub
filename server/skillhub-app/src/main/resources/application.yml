@@ -71,6 +71,7 @@ spring:
             client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
         provider:
           github:
+            api-base-url: ${OAUTH2_GITHUB_API_BASE_URL:https://api.github.com}
             user-info-uri: https://api.github.com/user
           gitlab:
             authorization-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/authorize

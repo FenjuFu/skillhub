@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -58,6 +59,40 @@ class GitHubClaimsExtractorTest {
                         MediaType.APPLICATION_JSON
                 ));
         GitHubClaimsExtractor extractor = new GitHubClaimsExtractor(restClientBuilder);
+
+        OAuthClaims claims = extractor.extract(userRequest(), githubUser(null));
+
+        assertThat(claims.email()).isEqualTo("alice@example.com");
+        assertThat(claims.emailVerified()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void extract_treatsEmailApiFailureAsUnverified() {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        server.expect(requestTo("https://api.github.com/user/emails"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators
+                        .withStatus(HttpStatus.FORBIDDEN));
+        GitHubClaimsExtractor extractor = new GitHubClaimsExtractor(restClientBuilder);
+
+        OAuthClaims claims = extractor.extract(userRequest(), githubUser("alice@example.com"));
+
+        assertThat(claims.email()).isEqualTo("alice@example.com");
+        assertThat(claims.emailVerified()).isFalse();
+        server.verify();
+    }
+
+    @Test
+    void extract_usesConfiguredApiBaseUrl() {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        server.expect(requestTo("https://github-proxy.internal/user/emails"))
+                .andRespond(withSuccess(
+                        "[{\"email\":\"alice@example.com\",\"primary\":true,\"verified\":true}]",
+                        MediaType.APPLICATION_JSON));
+        GitHubClaimsExtractor extractor = new GitHubClaimsExtractor(restClientBuilder,
+                "https://github-proxy.internal");
 
         OAuthClaims claims = extractor.extract(userRequest(), githubUser(null));
 

@@ -6,6 +6,8 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Comparator;
 import java.util.List;
@@ -18,11 +20,19 @@ import java.util.Map;
 @Component
 public class GitHubClaimsExtractor implements OAuthClaimsExtractor {
 
+    private static final String DEFAULT_API_BASE_URL = "https://api.github.com";
+
     private final RestClient restClient;
 
     public GitHubClaimsExtractor(RestClient.Builder restClientBuilder) {
+        this(restClientBuilder, DEFAULT_API_BASE_URL);
+    }
+
+    @Autowired
+    public GitHubClaimsExtractor(RestClient.Builder restClientBuilder,
+                                 @org.springframework.beans.factory.annotation.Value("${skillhub.auth.github.api-base-url:https://api.github.com}") String apiBaseUrl) {
         this.restClient = restClientBuilder
-            .baseUrl("https://api.github.com")
+            .baseUrl(apiBaseUrl)
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
             .build();
     }
@@ -48,11 +58,17 @@ public class GitHubClaimsExtractor implements OAuthClaimsExtractor {
     }
 
     private GitHubEmail loadPrimaryEmail(OAuth2UserRequest request) {
-        List<GitHubEmail> emails = restClient.get()
-            .uri("/user/emails")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + request.getAccessToken().getTokenValue())
-            .retrieve()
-            .body(new org.springframework.core.ParameterizedTypeReference<List<GitHubEmail>>() {});
+        List<GitHubEmail> emails;
+        try {
+            emails = restClient.get()
+                .uri("/user/emails")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + request.getAccessToken().getTokenValue())
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<List<GitHubEmail>>() {});
+        } catch (RestClientException exception) {
+            // A provider lookup failure must never turn an unverified profile email into a trusted email.
+            return null;
+        }
 
         if (emails == null || emails.isEmpty()) {
             return null;
