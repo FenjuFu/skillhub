@@ -45,11 +45,11 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class SecurityConfig {
     private static final String CONTENT_SECURITY_POLICY = String.join("; ",
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "img-src 'self' data: blob: https:",
             "font-src 'self' data: https://fonts.gstatic.com",
-            "connect-src 'self' ws: wss: http://localhost:* https://localhost:*",
+            "connect-src 'self'",
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'none'",
