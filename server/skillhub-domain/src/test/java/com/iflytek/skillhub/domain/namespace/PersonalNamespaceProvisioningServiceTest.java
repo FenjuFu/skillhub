@@ -63,7 +63,7 @@ class PersonalNamespaceProvisioningServiceTest {
     }
 
     private void directoryContains(UserAccount... users) {
-        when(userAccountRepository.findByStatus(eq(UserStatus.ACTIVE), any()))
+        when(userAccountRepository.search(isNull(), eq(UserStatus.ACTIVE), any()))
                 .thenReturn(new PageImpl<>(List.of(users)));
     }
 
