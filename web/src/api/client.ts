@@ -49,7 +49,6 @@ import type {
   BatchMemberResponse,
   PersonalNamespaceSettings,
   PersonalNamespaceSettingsInput,
-  PersonalNamespaceBackfillResult,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -1463,17 +1462,6 @@ export const adminApi = {
         displayNameTemplate: request.displayNameTemplate.trim(),
       }),
     })
-  },
-
-  async backfillPersonalNamespaces(dryRun: boolean): Promise<PersonalNamespaceBackfillResult> {
-    return fetchJson<PersonalNamespaceBackfillResult>(
-      '/api/v1/admin/settings/personal-namespace/backfill',
-      {
-        method: 'POST',
-        headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ dryRun }),
-      },
-    )
   },
 }
 

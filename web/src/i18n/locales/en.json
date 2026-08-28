@@ -1668,25 +1668,6 @@
     "saveErrorTitle": "Could not save settings",
     "validationTitle": "Check the form",
     "validationTemplateRequired": "Templates cannot be empty.",
-    "fallbackErrorDescription": "Please try again.",
-    "backfillTitle": "Existing accounts",
-    "backfillDescription": "Turning the setting on only affects accounts activated afterwards. Run this once to give the accounts that already exist the namespace they would have received.",
-    "backfillPreviewAction": "Preview",
-    "backfillApplyAction": "Create {{count}} namespaces",
-    "backfillPreviewFirstHint": "Preview first — the create button stays disabled until you do.",
-    "backfillSummary": "Scanned {{scanned}} accounts · {{already}} already had one · {{acted}} to act on",
-    "backfillTruncated": "Stopped at the per-run cap. Run it again to continue.",
-    "backfillNothingToDo": "Every account already has a namespace.",
-    "backfillColumnUser": "Account",
-    "backfillColumnSlug": "Slug",
-    "backfillColumnOutcome": "Outcome",
-    "backfillOutcome": {
-      "PLANNED": "Would be created",
-      "CREATED": "Created",
-      "NO_SLUG": "No slug available"
-    },
-    "backfillDoneTitle": "Backfill finished",
-    "backfillDoneDescription": "Created {{count}} namespaces.",
-    "backfillErrorTitle": "Backfill failed"
+    "fallbackErrorDescription": "Please try again."
   }
 }

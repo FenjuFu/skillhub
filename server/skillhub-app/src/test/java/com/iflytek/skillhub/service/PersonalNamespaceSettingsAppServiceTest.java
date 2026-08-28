@@ -2,12 +2,8 @@ package com.iflytek.skillhub.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
-import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillEntry;
-import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillReport;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceProvisioningService;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceSettings;
-import com.iflytek.skillhub.dto.PersonalNamespaceBackfillRequest;
-import com.iflytek.skillhub.dto.PersonalNamespaceBackfillResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsUpdateRequest;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
@@ -24,11 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -110,50 +103,6 @@ class PersonalNamespaceSettingsAppServiceTest {
                 .contains("\"before\"")
                 .contains("\"after\"")
                 .contains("${username}-space");
-    }
-
-    @Test
-    void backfillDryRunIsNotAudited() {
-        when(personalNamespaceProvisioningService.backfill(true)).thenReturn(
-                new PersonalNamespaceBackfillReport(true, 3, 1, 0, false, List.of(
-                        new PersonalNamespaceBackfillEntry("usr_1", "alice", "alice",
-                                PersonalNamespaceBackfillEntry.Outcome.PLANNED))));
-
-        PersonalNamespaceBackfillResponse response = service.backfill(
-                new PersonalNamespaceBackfillRequest(true), "usr_admin", null);
-
-        assertThat(response.dryRun()).isTrue();
-        assertThat(response.entries()).singleElement()
-                .satisfies(entry -> assertThat(entry.outcome()).isEqualTo("PLANNED"));
-        verify(auditLogService, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void backfillRecordsWhatItCreated() {
-        when(personalNamespaceProvisioningService.backfill(false)).thenReturn(
-                new PersonalNamespaceBackfillReport(false, 3, 1, 0, false, List.of(
-                        new PersonalNamespaceBackfillEntry("usr_1", "alice", "alice",
-                                PersonalNamespaceBackfillEntry.Outcome.CREATED),
-                        new PersonalNamespaceBackfillEntry("usr_2", "admin", null,
-                                PersonalNamespaceBackfillEntry.Outcome.NO_SLUG))));
-
-        service.backfill(new PersonalNamespaceBackfillRequest(false), "usr_admin",
-                new AuditRequestContext("10.0.0.1", "curl/8"));
-
-        ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
-        verify(auditLogService).record(
-                eq("usr_admin"),
-                eq("SYSTEM_SETTING_PERSONAL_NAMESPACE_BACKFILL"),
-                eq("SYSTEM_SETTING"),
-                isNull(),
-                eq("req-1"),
-                eq("10.0.0.1"),
-                eq("curl/8"),
-                detailCaptor.capture());
-        assertThat(detailCaptor.getValue())
-                .contains("\"scannedAccounts\":3")
-                .contains("usr_1")
-                .contains("\"unplaced\":[\"usr_2\"]");
     }
 
     @Test

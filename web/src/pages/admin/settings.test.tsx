@@ -24,7 +24,6 @@ vi.mock('@/shared/lib/toast', () => ({
 vi.mock('@/features/admin/use-personal-namespace-settings', () => ({
   usePersonalNamespaceSettings: () => usePersonalNamespaceSettingsMock(),
   useUpdatePersonalNamespaceSettings: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useBackfillPersonalNamespaces: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 import { AdminSettingsPage, previewSlug, renderTemplate } from './settings'
@@ -69,22 +68,6 @@ describe('AdminSettingsPage', () => {
 
     expect(html).toContain('adminSettings.personalNamespaceTitle')
     expect(html).toContain('adminSettings.slugTemplateLabel')
-  })
-
-  it('offers the backfill for accounts that already exist', () => {
-    const html = renderToStaticMarkup(<AdminSettingsPage />)
-
-    expect(html).toContain('adminSettings.backfillTitle')
-    expect(html).toContain('adminSettings.backfillPreviewAction')
-  })
-
-  it('keeps the apply button disabled until a preview has been run', () => {
-    const html = renderToStaticMarkup(<AdminSettingsPage />)
-
-    const applyIndex = html.indexOf('adminSettings.backfillApplyAction')
-    expect(applyIndex).toBeGreaterThan(-1)
-    // The apply button carries `disabled` because no preview result exists yet.
-    expect(html.lastIndexOf('disabled', applyIndex)).toBeGreaterThan(-1)
   })
 
   it('shows a loading state while the settings are fetched', () => {
