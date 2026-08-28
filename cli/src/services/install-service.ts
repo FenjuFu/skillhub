@@ -7,7 +7,9 @@ import { EXIT } from '../shared/constants'
 import { extractZip } from '../platform/archive'
 import { readBoundedResponseBody } from '../platform/download'
 import { canonicalizeExistingPath, pathExists } from '../platform/paths'
+import { snapshotSkillDirectory } from './skill-fingerprint'
 import type { AgentCandidate } from '../agents/types'
+import type { ResolveResponse } from '../clients/skillhub-client'
 
 export interface InstallOptions {
   registry: string
@@ -18,6 +20,7 @@ export interface InstallOptions {
   targets: AgentCandidate[]
   force: boolean
   home?: string | undefined
+  resolved?: ResolveResponse | undefined
 }
 
 async function preflightInstallTargets(
@@ -55,7 +58,7 @@ async function preflightInstallTargets(
 export async function installSkill(options: InstallOptions): Promise<{ installed: Array<{ agent: string; dir: string }> }> {
   const preparedTargets = await preflightInstallTargets(options.targets, options.slug, options.force)
   const client = new SkillHubClient(options.registry, options.token)
-  const resolved = await client.resolve(options.namespace, options.slug, options.version)
+  const resolved = options.resolved ?? await client.resolve(options.namespace, options.slug, options.version)
   const response = await client.download(options.namespace, options.slug, resolved.version)
   const buffer = await readBoundedResponseBody(response)
 
@@ -71,6 +74,7 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
       await extractZip(buffer, tempDir)
 
       const installedAt = new Date().toISOString()
+      const snapshot = await snapshotSkillDirectory(tempDir)
       const metaDir = join(tempDir, '.skillhub')
       await mkdir(metaDir, { recursive: true })
       await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
@@ -78,6 +82,9 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
         namespace: options.namespace,
         slug: options.slug,
         version: resolved.version,
+        fingerprint: resolved.fingerprint,
+        files: snapshot.files,
+        source: 'skillhub',
         agent: target.agent,
         installedAt
       }, null, 2))
@@ -89,14 +96,30 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
         })
       }
 
-      if (await pathExists(skillDir) && options.force) {
-        await store.removeTargetsByInstallDir(skillDir)
-        await rm(skillDir, { recursive: true, force: true })
-      }
-
+      const backupDir = `${skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
+      let backupCreated = false
       try {
+        if (await pathExists(skillDir)) {
+          await rename(skillDir, backupDir)
+          backupCreated = true
+        }
         await rename(tempDir, skillDir)
+        movedIntoPlace = true
+
+        await store.replaceTargetAtInstallDir(options.registry, options.namespace, options.slug, resolved.version, {
+          agent: target.agent,
+          rootDir: target.rootDir,
+          installDir: skillDir,
+          installedAt
+        }, resolved.fingerprint)
+
+        if (backupCreated) await rm(backupDir, { recursive: true, force: true }).catch(() => {})
       } catch (error) {
+        if (movedIntoPlace) {
+          await rm(skillDir, { recursive: true, force: true }).catch(() => {})
+          movedIntoPlace = false
+        }
+        if (backupCreated) await rename(backupDir, skillDir).catch(() => {})
         if (!options.force && await pathExists(skillDir)) {
           throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
             path: skillDir,
@@ -105,14 +128,6 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
         }
         throw error
       }
-      movedIntoPlace = true
-
-      await store.upsertTarget(options.registry, options.namespace, options.slug, resolved.version, {
-        agent: target.agent,
-        rootDir: target.rootDir,
-        installDir: skillDir,
-        installedAt
-      })
     } finally {
       if (!movedIntoPlace) {
         await rm(tempDir, { recursive: true, force: true }).catch(() => {})

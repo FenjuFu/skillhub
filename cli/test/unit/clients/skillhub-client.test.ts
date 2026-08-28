@@ -15,7 +15,8 @@ describe('SkillHubClient', () => {
           namespace: 'team',
           slug: 'custom-skill',
           version: '1.0.0',
-          visibility: 'PRIVATE'
+          visibility: 'PRIVATE',
+          status: 'UPLOADED'
         }
       })
     }) as unknown as typeof fetch
@@ -186,6 +187,34 @@ describe('SkillHubClient', () => {
     const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
     await client.resolve('ns', 'sk', '2.0.0')
     expect(capturedUrl).toContain('?version=2.0.0')
+  })
+
+  test('listNamespaceSkills forwards cursor and limit', async () => {
+    let capturedUrl = ''
+    const fetchImpl = (async (input: URL | RequestInfo) => {
+      capturedUrl = String(input)
+      return Response.json({ data: { items: [], nextCursor: null } })
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    await client.listNamespaceSkills('team a', 'cursor-value', 50)
+
+    expect(capturedUrl).toContain('/api/cli/v1/namespaces/team%20a/skills')
+    expect(capturedUrl).toContain('cursor=cursor-value')
+    expect(capturedUrl).toContain('limit=50')
+  })
+
+  test('submitReview posts the lifecycle request with bearer auth', async () => {
+    const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      expect(String(input)).toContain('/api/v1/skills/team-a/demo/submit-review')
+      expect(init?.headers).toMatchObject({ Authorization: 'Bearer token', 'Content-Type': 'application/json' })
+      expect(JSON.parse(String(init?.body))).toEqual({ version: '1.0.0', targetVisibility: 'NAMESPACE_ONLY' })
+      return Response.json({ data: { skillId: 1, versionId: 2, action: 'SUBMIT_REVIEW', status: 'PENDING_REVIEW' } })
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    await expect(client.submitReview('team-a', 'demo', '1.0.0', 'NAMESPACE_ONLY'))
+      .resolves.toMatchObject({ status: 'PENDING_REVIEW' })
   })
 
   // --- handleJsonResponse() non-2xx classification ---
