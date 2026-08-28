@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -101,6 +102,23 @@ class SkillPackageValidatorTest {
 
         assertTrue(result.passed());
         assertTrue(result.warnings().stream().anyMatch(e -> e.contains("Disallowed file extension") && e.contains("malware.exe")));
+    }
+
+    @Test
+    void acceptsAllowedExtensionRegardlessOfFilenameCase() {
+        SkillPackageValidator customValidator = new SkillPackageValidator(
+                new SkillMetadataParser(), 100, SkillPackagePolicy.MAX_SINGLE_FILE_SIZE,
+                SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE, Set.of(".md", "Makefile"));
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("Makefile", "build:\n".getBytes(), 7, "text/plain")
+        );
+
+        ValidationResult result = customValidator.validate(entries);
+
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream()
+                .noneMatch(warning -> warning.contains("Disallowed file extension: Makefile")));
     }
 
     @Test
