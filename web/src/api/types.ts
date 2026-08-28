@@ -612,22 +612,3 @@ export interface PersonalNamespaceBackfillResult {
   truncated: boolean
   entries: PersonalNamespaceBackfillEntry[]
 }
-
-export interface DefaultNamespaceSettings {
-  slugs: string[]
-}
-
-export interface DefaultNamespaceBackfillEntry {
-  userId: string
-  displayName: string | null
-  slugs: string[]
-}
-
-export interface DefaultNamespaceBackfillResult {
-  dryRun: boolean
-  scannedAccounts: number
-  alreadyEnrolled: number
-  systemAccountsSkipped: number
-  truncated: boolean
-  entries: DefaultNamespaceBackfillEntry[]
-}

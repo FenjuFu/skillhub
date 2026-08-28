@@ -388,22 +388,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/settings/default-namespaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getDefaultNamespaces"];
-        put: operations["updateDefaultNamespaces"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -1614,22 +1598,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["backfillPersonalNamespaces"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/settings/default-namespaces/backfill": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["backfillDefaultNamespaces"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3794,21 +3762,6 @@ export interface components {
             displayNameTemplate?: string;
             supportedPlaceholders?: string[];
         };
-        DefaultNamespaceSettingsUpdateRequest: {
-            slugs: string[];
-        };
-        ApiResponseDefaultNamespaceSettingsResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["DefaultNamespaceSettingsResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        DefaultNamespaceSettingsResponse: {
-            slugs?: string[];
-        };
         AdminLabelUpdateRequest: {
             /** @enum {string} */
             type: "RECOMMENDED" | "PRIVILEGED";
@@ -4232,7 +4185,7 @@ export interface components {
             comment?: string;
             disposition?: string;
         };
-        BackfillRequest: {
+        PersonalNamespaceBackfillRequest: {
             dryRun: boolean;
         };
         ApiResponsePersonalNamespaceBackfillResponse: {
@@ -4256,26 +4209,6 @@ export interface components {
             scannedAccounts?: number;
             /** Format: int32 */
             alreadyProvisioned?: number;
-            /** Format: int32 */
-            systemAccountsSkipped?: number;
-            truncated?: boolean;
-            entries?: components["schemas"]["Entry"][];
-        };
-        ApiResponseDefaultNamespaceBackfillResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["DefaultNamespaceBackfillResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        DefaultNamespaceBackfillResponse: {
-            dryRun?: boolean;
-            /** Format: int32 */
-            scannedAccounts?: number;
-            /** Format: int32 */
-            alreadyEnrolled?: number;
             /** Format: int32 */
             systemAccountsSkipped?: number;
             truncated?: boolean;
@@ -6584,50 +6517,6 @@ export interface operations {
             };
         };
     };
-    getDefaultNamespaces: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDefaultNamespaceSettingsResponse"];
-                };
-            };
-        };
-    };
-    updateDefaultNamespaces: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DefaultNamespaceSettingsUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDefaultNamespaceSettingsResponse"];
-                };
-            };
-        };
-    };
     updateMemberRole_2: {
         parameters: {
             query?: never;
@@ -8791,7 +8680,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BackfillRequest"];
+                "application/json": components["schemas"]["PersonalNamespaceBackfillRequest"];
             };
         };
         responses: {
@@ -8802,30 +8691,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePersonalNamespaceBackfillResponse"];
-                };
-            };
-        };
-    };
-    backfillDefaultNamespaces: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BackfillRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDefaultNamespaceBackfillResponse"];
                 };
             };
         };

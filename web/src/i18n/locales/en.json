@@ -1687,17 +1687,6 @@
     },
     "backfillDoneTitle": "Backfill finished",
     "backfillDoneDescription": "Created {{count}} namespaces.",
-    "backfillErrorTitle": "Backfill failed",
-    "defaultsTitle": "Namespaces every account joins",
-    "defaultsDescription": "A namespace nobody belongs to is invisible: the namespace list only shows namespaces you are a member of. List the ones every newly activated account should be enrolled in.",
-    "defaultsLabel": "Namespace slugs",
-    "defaultsHint": "Comma separated. Each must be an existing, active namespace.",
-    "defaultsSaveDescription": "Accounts activated from now on join these namespaces.",
-    "defaultsBackfillHint": "Preview first — the enrol button stays disabled until you do.",
-    "defaultsBackfillApplyAction": "Enrol {{count}} accounts",
-    "defaultsBackfillSummary": "Scanned {{scanned}} accounts · {{already}} already enrolled · {{acted}} to enrol",
-    "defaultsBackfillNothingToDo": "Every account is already enrolled.",
-    "defaultsBackfillDoneDescription": "Enrolled {{count}} accounts.",
-    "defaultsColumnSlugs": "Will join"
+    "backfillErrorTitle": "Backfill failed"
   }
 }

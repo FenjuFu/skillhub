@@ -14,7 +14,7 @@ import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.event.UserActivatedEvent;
-import com.iflytek.skillhub.domain.namespace.DefaultNamespaceMembershipService;
+import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
@@ -48,7 +48,7 @@ class LocalAuthServiceTest {
     private UserRoleBindingRepository userRoleBindingRepository;
 
     @Mock
-    private DefaultNamespaceMembershipService defaultNamespaceMembershipService;
+    private GlobalNamespaceMembershipService globalNamespaceMembershipService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -64,7 +64,7 @@ class LocalAuthServiceTest {
             credentialRepository,
             userAccountRepository,
             userRoleBindingRepository,
-            defaultNamespaceMembershipService,
+            globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
             passwordEncoder,
             CLOCK,
@@ -89,7 +89,7 @@ class LocalAuthServiceTest {
         assertThat(principal.email()).isEqualTo("alice@example.com");
         assertThat(principal.platformRoles()).containsExactly("USER");
         verify(credentialRepository).save(any(LocalCredential.class));
-        verify(defaultNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
+        verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
     }
 
     @Test

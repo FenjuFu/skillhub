@@ -17,7 +17,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.event.UserActivatedEvent;
-import com.iflytek.skillhub.domain.namespace.DefaultNamespaceMembershipService;
+import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
@@ -46,7 +46,7 @@ class IdentityBindingServiceTest {
     private UserRoleBindingRepository roleBindingRepo;
 
     @Mock
-    private DefaultNamespaceMembershipService defaultNamespaceMembershipService;
+    private GlobalNamespaceMembershipService globalNamespaceMembershipService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -56,7 +56,7 @@ class IdentityBindingServiceTest {
     @BeforeEach
     void setUp() {
         service = new IdentityBindingService(bindingRepo, userRepo, roleBindingRepo,
-                defaultNamespaceMembershipService, eventPublisher);
+                globalNamespaceMembershipService, eventPublisher);
     }
 
     @Test
@@ -77,7 +77,7 @@ class IdentityBindingServiceTest {
 
         ArgumentCaptor<UserAccount> userCaptor = ArgumentCaptor.forClass(UserAccount.class);
         verify(userRepo).save(userCaptor.capture());
-        verify(defaultNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
+        verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
         verify(bindingRepo).save(any(IdentityBinding.class));
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.oauthProvider()).isEqualTo("github");
@@ -137,7 +137,7 @@ class IdentityBindingServiceTest {
         assertThatThrownBy(() -> service.bindOrCreate(claims, UserStatus.PENDING))
                 .isInstanceOf(AccountPendingException.class);
 
-        verify(defaultNamespaceMembershipService, never()).ensureMember(any());
+        verify(globalNamespaceMembershipService, never()).ensureMember(any());
     }
 
     @Test

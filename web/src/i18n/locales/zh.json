@@ -1687,17 +1687,6 @@
     },
     "backfillDoneTitle": "补建完成",
     "backfillDoneDescription": "已创建 {{count}} 个命名空间。",
-    "backfillErrorTitle": "补建失败",
-    "defaultsTitle": "全员默认加入的命名空间",
-    "defaultsDescription": "没有成员的命名空间是看不见的——命名空间列表只显示你是成员的那些。在这里列出每个新激活的账号都应该加入的命名空间。",
-    "defaultsLabel": "命名空间标识",
-    "defaultsHint": "用逗号分隔，每个都必须是已存在且启用的命名空间。",
-    "defaultsSaveDescription": "此后激活的账号会自动加入这些命名空间。",
-    "defaultsBackfillHint": "请先预览——未预览前加入按钮不可用。",
-    "defaultsBackfillApplyAction": "加入 {{count}} 个账号",
-    "defaultsBackfillSummary": "扫描 {{scanned}} 个账号 · {{already}} 个已加入 · {{acted}} 个待加入",
-    "defaultsBackfillNothingToDo": "所有账号都已经加入了。",
-    "defaultsBackfillDoneDescription": "已为 {{count}} 个账号加入。",
-    "defaultsColumnSlugs": "将加入"
+    "backfillErrorTitle": "补建失败"
   }
 }

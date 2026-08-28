@@ -125,11 +125,6 @@ skillhub:
     # the admin console instead; their defaults live in PersonalNamespaceProvisioningProperties.
     personal-provisioning:
       enabled: ${SKILLHUB_NAMESPACE_PERSONAL_PROVISIONING_ENABLED:false}
-    # Namespaces every newly activated account is enrolled in. The built-in global namespace is
-    # the historical behaviour; an administrator can change the list in the admin console, and the
-    # stored choice then wins over this file.
-    default-membership:
-      slugs: ${SKILLHUB_NAMESPACE_DEFAULT_MEMBERSHIP_SLUGS:global}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:

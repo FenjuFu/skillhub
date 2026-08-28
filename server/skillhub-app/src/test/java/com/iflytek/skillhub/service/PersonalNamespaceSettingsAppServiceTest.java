@@ -6,7 +6,7 @@ import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillEntry;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceBackfillReport;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceProvisioningService;
 import com.iflytek.skillhub.domain.namespace.PersonalNamespaceSettings;
-import com.iflytek.skillhub.dto.BackfillRequest;
+import com.iflytek.skillhub.dto.PersonalNamespaceBackfillRequest;
 import com.iflytek.skillhub.dto.PersonalNamespaceBackfillResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsResponse;
 import com.iflytek.skillhub.dto.PersonalNamespaceSettingsUpdateRequest;
@@ -120,7 +120,7 @@ class PersonalNamespaceSettingsAppServiceTest {
                                 PersonalNamespaceBackfillEntry.Outcome.PLANNED))));
 
         PersonalNamespaceBackfillResponse response = service.backfill(
-                new BackfillRequest(true), "usr_admin", null);
+                new PersonalNamespaceBackfillRequest(true), "usr_admin", null);
 
         assertThat(response.dryRun()).isTrue();
         assertThat(response.entries()).singleElement()
@@ -137,7 +137,7 @@ class PersonalNamespaceSettingsAppServiceTest {
                         new PersonalNamespaceBackfillEntry("usr_2", "admin", null,
                                 PersonalNamespaceBackfillEntry.Outcome.NO_SLUG))));
 
-        service.backfill(new BackfillRequest(false), "usr_admin",
+        service.backfill(new PersonalNamespaceBackfillRequest(false), "usr_admin",
                 new AuditRequestContext("10.0.0.1", "curl/8"));
 
         ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
