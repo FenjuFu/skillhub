@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApprovePromotion, usePromotionList, useRejectPromotion } from '@/features/promotion/use-promotion-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Pagination } from '@/shared/components/pagination'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { cn } from '@/shared/lib/utils'
@@ -17,10 +18,13 @@ import {
   TableRow,
 } from '@/shared/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import type { PromotionTask } from '@/api/types'
+import type { PagedResponse, PromotionTask } from '@/api/types'
 import type { PromotionSortDirection, PromotionStatus } from '@/features/promotion/use-promotion-list'
 
 type HistoryPromotionStatus = Extract<PromotionStatus, 'APPROVED' | 'REJECTED'>
+type PromotionPage = PagedResponse<PromotionTask>
+
+const PAGE_SIZE = 20
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
@@ -65,6 +69,14 @@ function SorterGlyph({ direction }: { direction: PromotionSortDirection }) {
       />
     </span>
   )
+}
+
+function PromotionPagination({ data, onPageChange }: { data: PromotionPage; onPageChange: (page: number) => void }) {
+  const totalPages = data.size > 0 ? Math.ceil(data.total / data.size) : 0
+  if (totalPages <= 1) {
+    return null
+  }
+  return <Pagination page={data.page} totalPages={totalPages} onPageChange={onPageChange} />
 }
 
 function PendingPromotionCard({
@@ -123,9 +135,9 @@ function PendingPromotionCard({
   )
 }
 
-function PendingPromotionList() {
+function PendingPromotionList({ page, onPageChange }: { page: number; onPageChange: (page: number) => void }) {
   const { t } = useTranslation()
-  const { data: items, isLoading } = usePromotionList({ status: 'PENDING' })
+  const { data, isLoading } = usePromotionList({ status: 'PENDING', page, size: PAGE_SIZE })
   const approveMutation = useApprovePromotion()
   const rejectMutation = useRejectPromotion()
   const [commentById, setCommentById] = useState<Record<number, string>>({})
@@ -134,14 +146,14 @@ function PendingPromotionList() {
     return <div className="h-32 animate-shimmer rounded-xl" />
   }
 
-  if (!items || items.length === 0) {
+  if (!data || data.items.length === 0) {
     return <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-muted-foreground">{t('promotions.empty')}</div>
   }
 
   const isMutating = approveMutation.isPending || rejectMutation.isPending
   return (
     <div className="space-y-4">
-      {items.map((item) => (
+      {data.items.map((item) => (
         <PendingPromotionCard
           key={item.id}
           item={item}
@@ -152,6 +164,7 @@ function PendingPromotionList() {
           onReject={() => rejectMutation.mutate({ id: item.id, comment: commentById[item.id] })}
         />
       ))}
+      <PromotionPagination data={data} onPageChange={onPageChange} />
     </div>
   )
 }
@@ -159,14 +172,24 @@ function PendingPromotionList() {
 function PromotionHistoryTable({
   status,
   sortDirection,
+  page,
+  onPageChange,
   onToggleSort,
 }: {
   status: HistoryPromotionStatus
   sortDirection: PromotionSortDirection
+  page: number
+  onPageChange: (page: number) => void
   onToggleSort: () => void
 }) {
   const { t, i18n } = useTranslation()
-  const { data: items, isLoading } = usePromotionList({ status, sortBy: 'reviewedAt', sortDirection })
+  const { data, isLoading } = usePromotionList({
+    status,
+    page,
+    size: PAGE_SIZE,
+    sortBy: 'reviewedAt',
+    sortDirection,
+  })
   const nextDirection = sortDirection === 'DESC' ? 'ASC' : 'DESC'
   const sortLabel = nextDirection === 'ASC' ? t('promotions.sortReviewedTimeAsc') : t('promotions.sortReviewedTimeDesc')
 
@@ -180,13 +203,14 @@ function PromotionHistoryTable({
     )
   }
 
-  if (!items || items.length === 0) {
+  if (!data || data.items.length === 0) {
     return <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-muted-foreground">{t('promotions.empty')}</div>
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60">
-      <Table aria-label={t('promotions.historyTableLabel')}>
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-xl border border-border/60">
+        <Table aria-label={t('promotions.historyTableLabel')}>
         <TableHeader>
           <TableRow className="bg-muted/35">
             <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('promotions.colSkill')}</TableHead>
@@ -210,7 +234,7 @@ function PromotionHistoryTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => {
+          {data.items.map((item) => {
             const reviewCommentId = `promotion-review-comment-${item.id}`
             return (
               <TableRow key={item.id}>
@@ -240,7 +264,9 @@ function PromotionHistoryTable({
             )
           })}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
+      <PromotionPagination data={data} onPageChange={onPageChange} />
     </div>
   )
 }
@@ -250,6 +276,11 @@ function PromotionHistoryTable({
  */
 export function PromotionsPage() {
   const { t } = useTranslation()
+  const [pages, setPages] = useState<Record<PromotionStatus, number>>({
+    PENDING: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+  })
   const [historySortDirection, setHistorySortDirection] = useState<Record<HistoryPromotionStatus, PromotionSortDirection>>({
     APPROVED: 'DESC',
     REJECTED: 'DESC',
@@ -262,6 +293,10 @@ export function PromotionsPage() {
     }))
   }
 
+  function changePage(status: PromotionStatus, page: number) {
+    setPages((current) => ({ ...current, [status]: page }))
+  }
+
   return (
     <div className="space-y-8 animate-fade-up">
       <DashboardPageHeader title={t('promotions.title')} subtitle={t('promotions.subtitle')} />
@@ -272,12 +307,14 @@ export function PromotionsPage() {
           <TabsTrigger value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
         </TabsList>
         <TabsContent value="PENDING" className="mt-6">
-          <PendingPromotionList />
+          <PendingPromotionList page={pages.PENDING} onPageChange={(page) => changePage('PENDING', page)} />
         </TabsContent>
         <TabsContent value="APPROVED" className="mt-6">
           <PromotionHistoryTable
             status="APPROVED"
             sortDirection={historySortDirection.APPROVED}
+            page={pages.APPROVED}
+            onPageChange={(page) => changePage('APPROVED', page)}
             onToggleSort={() => toggleHistorySort('APPROVED')}
           />
         </TabsContent>
@@ -285,6 +322,8 @@ export function PromotionsPage() {
           <PromotionHistoryTable
             status="REJECTED"
             sortDirection={historySortDirection.REJECTED}
+            page={pages.REJECTED}
+            onPageChange={(page) => changePage('REJECTED', page)}
             onToggleSort={() => toggleHistorySort('REJECTED')}
           />
         </TabsContent>
