@@ -41,17 +41,20 @@ public class PersonalNamespaceProvisioningService {
     private final NamespaceService namespaceService;
     private final NamespaceRepository namespaceRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
+    private final com.iflytek.skillhub.domain.user.UserAccountRepository userAccountRepository;
 
     public PersonalNamespaceProvisioningService(SystemSettingService systemSettingService,
                                                 PersonalNamespaceProvisioningProperties defaults,
                                                 NamespaceService namespaceService,
                                                 NamespaceRepository namespaceRepository,
-                                                NamespaceMemberRepository namespaceMemberRepository) {
+                                                NamespaceMemberRepository namespaceMemberRepository,
+                                                com.iflytek.skillhub.domain.user.UserAccountRepository userAccountRepository) {
         this.systemSettingService = systemSettingService;
         this.defaults = defaults;
         this.namespaceService = namespaceService;
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
+        this.userAccountRepository = userAccountRepository;
     }
 
     /**
@@ -74,6 +77,12 @@ public class PersonalNamespaceProvisioningService {
     public Optional<Namespace> provisionFor(PersonalNamespaceOwner owner) {
         PersonalNamespaceSettings settings = currentSettings();
         if (!settings.enabled()) {
+            return Optional.empty();
+        }
+        if (userAccountRepository.findById(owner.userId())
+                .map(com.iflytek.skillhub.domain.user.UserAccount::isSystemAccount)
+                .orElse(false)) {
+            log.info("Skipping personal namespace for system account {}", owner.userId());
             return Optional.empty();
         }
         if (alreadyOwnsNamespace(owner.userId())) {

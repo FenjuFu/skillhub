@@ -37,6 +37,9 @@ class PersonalNamespaceProvisioningServiceTest {
     @Mock
     private NamespaceMemberRepository namespaceMemberRepository;
 
+    @Mock
+    private com.iflytek.skillhub.domain.user.UserAccountRepository userAccountRepository;
+
     private PersonalNamespaceProvisioningService service;
 
     @BeforeEach
@@ -46,7 +49,8 @@ class PersonalNamespaceProvisioningServiceTest {
                 new PersonalNamespaceProvisioningProperties(),
                 namespaceService,
                 namespaceRepository,
-                namespaceMemberRepository);
+                namespaceMemberRepository,
+                userAccountRepository);
     }
 
     private void withSettings(boolean enabled, String slugTemplate, String displayNameTemplate) {
@@ -73,6 +77,17 @@ class PersonalNamespaceProvisioningServiceTest {
         withSettings(false, "${username}", "${username}");
 
         assertTrue(service.provisionFor(ALICE).isEmpty());
+        verify(namespaceService, never()).createNamespace(any(), any(), any(), any());
+    }
+
+    @Test
+    void skipsSystemAccount() {
+        withSettings(true, "personal-${random}", "${username}-个人空间");
+        when(userAccountRepository.findById("usr_system"))
+                .thenReturn(Optional.of(com.iflytek.skillhub.domain.user.UserAccount
+                        .systemAccount("usr_system", "system", null, null)));
+
+        assertTrue(service.provisionFor(new PersonalNamespaceOwner("usr_system", "system", null)).isEmpty());
         verify(namespaceService, never()).createNamespace(any(), any(), any(), any());
     }
 
