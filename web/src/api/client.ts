@@ -47,8 +47,6 @@ import type {
   LabelDefinition,
   LabelItem,
   BatchMemberResponse,
-  PersonalNamespaceSettings,
-  PersonalNamespaceSettingsInput,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -1443,24 +1441,6 @@ export const adminApi = {
       method: 'POST',
       headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ comment }),
-    })
-  },
-
-  async getPersonalNamespaceSettings(): Promise<PersonalNamespaceSettings> {
-    return fetchJson<PersonalNamespaceSettings>('/api/v1/admin/settings/personal-namespace')
-  },
-
-  async updatePersonalNamespaceSettings(
-    request: PersonalNamespaceSettingsInput,
-  ): Promise<PersonalNamespaceSettings> {
-    return fetchJson<PersonalNamespaceSettings>('/api/v1/admin/settings/personal-namespace', {
-      method: 'PUT',
-      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        enabled: request.enabled,
-        slugTemplate: request.slugTemplate.trim(),
-        displayNameTemplate: request.displayNameTemplate.trim(),
-      }),
     })
   },
 }

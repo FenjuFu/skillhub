@@ -6,9 +6,7 @@ import org.springframework.stereotype.Component;
 /**
  * Deployment defaults for personal namespace provisioning.
  *
- * <p>These apply until an administrator saves the setting in the admin console, after which the
- * stored value wins. Deployments that manage configuration purely through files can therefore keep
- * doing so and never touch the console.
+ * <p>Deployments can disable provisioning with the environment-backed {@code enabled} property.
  */
 @Component
 @ConfigurationProperties(prefix = "skillhub.namespace.personal-provisioning")
@@ -20,9 +18,8 @@ public class PersonalNamespaceProvisioningProperties {
     private boolean enabled = false;
 
     /**
-     * Kept out of {@code application.yml}: the {@code ${...}} placeholders would be resolved as
-     * Spring property references. Operators change the templates in the admin console, so these
-     * defaults only apply until someone does.
+     * Templates remain code defaults because Spring treats {@code ${...}} in YAML as property
+     * references.
      */
     private String slugTemplate = "personal-${random}";
 

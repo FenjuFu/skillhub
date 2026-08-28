@@ -1,6 +1,5 @@
 package com.iflytek.skillhub.domain.namespace;
 
-import com.iflytek.skillhub.domain.setting.SystemSettingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,9 +25,6 @@ class PersonalNamespaceProvisioningServiceTest {
             new PersonalNamespaceOwner("usr_alice", "alice", "alice@example.com");
 
     @Mock
-    private SystemSettingService systemSettingService;
-
-    @Mock
     private NamespaceService namespaceService;
 
     @Mock
@@ -41,12 +37,13 @@ class PersonalNamespaceProvisioningServiceTest {
     private com.iflytek.skillhub.domain.user.UserAccountRepository userAccountRepository;
 
     private PersonalNamespaceProvisioningService service;
+    private PersonalNamespaceProvisioningProperties properties;
 
     @BeforeEach
     void setUp() {
+        properties = new PersonalNamespaceProvisioningProperties();
         service = new PersonalNamespaceProvisioningService(
-                systemSettingService,
-                new PersonalNamespaceProvisioningProperties(),
+                properties,
                 namespaceService,
                 namespaceRepository,
                 namespaceMemberRepository,
@@ -54,9 +51,9 @@ class PersonalNamespaceProvisioningServiceTest {
     }
 
     private void withSettings(boolean enabled, String slugTemplate, String displayNameTemplate) {
-        when(systemSettingService.get(eq(PersonalNamespaceProvisioningService.SETTING_KEY),
-                eq(PersonalNamespaceSettings.class), any()))
-                .thenReturn(new PersonalNamespaceSettings(enabled, slugTemplate, displayNameTemplate));
+        properties.setEnabled(enabled);
+        properties.setSlugTemplate(slugTemplate);
+        properties.setDisplayNameTemplate(displayNameTemplate);
     }
 
     private void ownsNothing() {

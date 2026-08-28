@@ -1,6 +1,5 @@
 package com.iflytek.skillhub.domain.namespace;
 
-import com.iflytek.skillhub.domain.setting.SystemSettingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -27,8 +26,6 @@ import java.util.Optional;
 @Service
 public class PersonalNamespaceProvisioningService {
 
-    public static final String SETTING_KEY = "namespace.personal-provisioning";
-
     /**
      * Upper bound on de-duplication suffixes before giving up on a slug base.
      */
@@ -36,20 +33,17 @@ public class PersonalNamespaceProvisioningService {
 
     private static final Logger log = LoggerFactory.getLogger(PersonalNamespaceProvisioningService.class);
 
-    private final SystemSettingService systemSettingService;
     private final PersonalNamespaceProvisioningProperties defaults;
     private final NamespaceService namespaceService;
     private final NamespaceRepository namespaceRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final com.iflytek.skillhub.domain.user.UserAccountRepository userAccountRepository;
 
-    public PersonalNamespaceProvisioningService(SystemSettingService systemSettingService,
-                                                PersonalNamespaceProvisioningProperties defaults,
+    public PersonalNamespaceProvisioningService(PersonalNamespaceProvisioningProperties defaults,
                                                 NamespaceService namespaceService,
                                                 NamespaceRepository namespaceRepository,
                                                 NamespaceMemberRepository namespaceMemberRepository,
                                                 com.iflytek.skillhub.domain.user.UserAccountRepository userAccountRepository) {
-        this.systemSettingService = systemSettingService;
         this.defaults = defaults;
         this.namespaceService = namespaceService;
         this.namespaceRepository = namespaceRepository;
@@ -61,12 +55,7 @@ public class PersonalNamespaceProvisioningService {
      * Returns the effective policy: the administrator's stored choice, or the deployment defaults.
      */
     public PersonalNamespaceSettings currentSettings() {
-        return systemSettingService.get(SETTING_KEY, PersonalNamespaceSettings.class, defaults.toSettings());
-    }
-
-    @Transactional
-    public PersonalNamespaceSettings updateSettings(PersonalNamespaceSettings settings, String actorUserId) {
-        return systemSettingService.put(SETTING_KEY, settings, actorUserId);
+        return defaults.toSettings();
     }
 
     /**
