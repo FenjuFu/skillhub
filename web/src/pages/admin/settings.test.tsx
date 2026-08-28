@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const usePersonalNamespaceSettingsMock = vi.fn()
 const useDefaultNamespacesMock = vi.fn()
-const useAdminNamespacesMock = vi.fn()
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -35,10 +34,6 @@ vi.mock('@/features/admin/use-default-namespaces', () => ({
   useDefaultNamespaces: () => useDefaultNamespacesMock(),
   useUpdateDefaultNamespaces: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useBackfillDefaultNamespaces: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}))
-
-vi.mock('@/features/admin/use-admin-namespaces', () => ({
-  useAdminNamespaces: () => useAdminNamespacesMock(),
 }))
 
 import { AdminSettingsPage, previewSlug, renderTemplate } from './settings'
@@ -78,13 +73,6 @@ describe('AdminSettingsPage', () => {
     })
     useDefaultNamespacesMock.mockReturnValue({
       data: { slugs: ['global', 'musee'] },
-      isLoading: false,
-    })
-    useAdminNamespacesMock.mockReturnValue({
-      data: {
-        items: [{ slug: 'global' }, { slug: 'musee' }, { slug: 'team-a' }],
-        total: 3,
-      },
       isLoading: false,
     })
   })
@@ -144,34 +132,12 @@ describe('AdminSettingsPage', () => {
     expect((apply as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('ticks exactly the default namespaces the server returned', async () => {
+  it('shows the configured default namespaces the server returned', async () => {
     render(<AdminSettingsPage />)
 
-    await screen.findByText('adminSettings.defaultsTitle')
-    const ticked = (slug: string) =>
-      (screen.getByText(slug).closest('label')?.querySelector('input') as HTMLInputElement).checked
-
+    const input = (await screen.findByLabelText('adminSettings.defaultsLabel')) as HTMLInputElement
     await waitFor(() => {
-      expect(ticked('global')).toBe(true)
+      expect(input.value).toBe('global, musee')
     })
-    expect(ticked('musee')).toBe(true)
-    expect(ticked('team-a')).toBe(false)
-  })
-
-  /**
-   * A configured namespace that has since been deleted is not in the choice list. It must still
-   * appear, ticked and flagged, so saving cannot drop it without the operator noticing.
-   */
-  it('still offers a configured namespace that no longer exists', async () => {
-    useDefaultNamespacesMock.mockReturnValue({
-      data: { slugs: ['global', 'vanished'] },
-      isLoading: false,
-    })
-
-    render(<AdminSettingsPage />)
-
-    const row = (await screen.findByText('vanished')).closest('label')
-    expect((row?.querySelector('input') as HTMLInputElement).checked).toBe(true)
-    expect(row?.textContent).toContain('adminSettings.defaultsMissingNamespace')
   })
 })
