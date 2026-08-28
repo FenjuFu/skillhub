@@ -89,8 +89,8 @@ class PersonalNamespaceProvisioningServiceTest {
     }
 
     @Test
-    void defaultsAreDisabledSoUpgradesDoNotStartCreatingNamespaces() {
-        assertEquals(false, new PersonalNamespaceProvisioningProperties().isEnabled());
+    void defaultsAreEnabledForNewAccountProvisioning() {
+        assertEquals(true, new PersonalNamespaceProvisioningProperties().isEnabled());
     }
 
     @Test

@@ -15,7 +15,7 @@ public class PersonalNamespaceProvisioningProperties {
     /**
      * Off by default: existing deployments must not start creating namespaces after an upgrade.
      */
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     /**
      * Templates remain code defaults because Spring treats {@code ${...}} in YAML as property

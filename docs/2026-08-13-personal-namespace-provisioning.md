@@ -75,9 +75,9 @@ slug 模板渲染后按 `SlugValidator` 的规则归一化：转小写、
 | 位置 | 项 | 默认 |
 |------|-----|------|
 | `application.yml` | `skillhub.namespace.personal-provisioning.enabled` | `false` |
-| 配置文件/环境变量 | 启用开关 | `false` |
+| 配置文件/环境变量 | 启用开关 | `true` |
 
-**默认关闭**：升级不应该让现有部署突然开始建命名空间。
+默认只对新激活账号生效，不回填已有账号；如需关闭可设置环境变量。
 
 模板刻意**不放在 `application.yml`**：它们含 `${...}`，
 Spring 会当成属性占位符去解析（Boot 3.2 / Framework 6.1 尚不支持转义 `\${`）。
