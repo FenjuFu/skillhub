@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,9 +17,9 @@ import java.util.regex.Pattern;
 @Component
 public class BasicPrePublishValidator implements PrePublishValidator {
 
-    private static final Pattern PLACEHOLDER_VALUE = Pattern.compile(
-            "(?i).*(your|example|sample|placeholder|changeme|replace|dummy|mock|test|fake|todo|xxx|redacted).*"
-    );
+    private static final Set<String> PLACEHOLDER_MARKERS = Set.of(
+            "your", "example", "sample", "placeholder", "changeme", "replace", "dummy",
+            "mock", "test", "fake", "todo", "xxx", "redacted");
     private static final List<SecretRule> SECRET_RULES = List.of(
             new SecretRule(Pattern.compile("(AKIA[0-9A-Z]{16})"), 1, "cloud access key"),
             new SecretRule(Pattern.compile("(ghp_[A-Za-z0-9]{20,})"), 1, "GitHub token"),
@@ -83,7 +84,8 @@ public class BasicPrePublishValidator implements PrePublishValidator {
         if (value == null || value.isBlank()) {
             return false;
         }
-        return PLACEHOLDER_VALUE.matcher(value).matches()
+        String normalizedValue = value.toLowerCase(Locale.ROOT);
+        return PLACEHOLDER_MARKERS.stream().anyMatch(normalizedValue::contains)
                 || value.chars().allMatch(ch -> ch == 'x' || ch == 'X' || ch == '*' || ch == '-');
     }
 
