@@ -50,5 +50,5 @@ async function listSkillFiles(root: string): Promise<string[]> {
   }
 
   await walk(root)
-  return files.sort((left, right) => left.localeCompare(right))
+  return files.sort()
 }
