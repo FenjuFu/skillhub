@@ -1,4 +1,4 @@
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { ConfigStore } from '../stores/config-store'
 import { CredentialsStore } from '../stores/credentials-store'
 import { SkillHubClient } from '../clients/skillhub-client'
@@ -31,6 +31,7 @@ export interface SyncPullOptions extends SyncCommonOptions {
 
 export interface SyncPushOptions extends SyncCommonOptions {
   all?: boolean
+  include?: string[]
   visibility?: string
   dryRun?: boolean
   submitReview?: boolean
@@ -78,20 +79,25 @@ export async function syncDiffCommand(options: SyncCommonOptions): Promise<strin
 }
 
 export async function syncPushCommand(path: string | undefined, options: SyncPushOptions): Promise<string> {
-  const context = await resolveSyncContext(options)
   if (path && options.all) {
     throw new CliError('path cannot be combined with --all', EXIT.usage)
   }
   if (!path && !options.all) {
     throw new CliError('provide a skill path or pass --all', EXIT.usage)
   }
+  const includedSkills = normalizeIncludedSkills(options.include)
+  if (includedSkills.length > 0 && !options.all) {
+    throw new CliError('--include requires --all', EXIT.usage)
+  }
 
+  const context = await resolveSyncContext(options)
   const visibility = normalizeVisibility(options.visibility ?? 'namespace-only')
   if (options.submitReview && visibility === 'PRIVATE') {
     throw new CliError('--submit-review requires public or namespace-only visibility', EXIT.usage)
   }
   const paths = options.all
-    ? await discoverSkillDirectories(context.rootDir)
+    ? selectIncludedSkillDirectories(
+        await discoverSkillDirectories(context.rootDir), includedSkills, context.rootDir)
     : [resolve(path!)]
   if (paths.length === 0) {
     throw new CliError(`no skill directories found in ${context.rootDir}`, EXIT.filesystem, { path: context.rootDir })
@@ -114,6 +120,36 @@ export async function syncPushCommand(path: string | undefined, options: SyncPus
     })
   }
   return output
+}
+
+function normalizeIncludedSkills(values: string[] | undefined): string[] {
+  if (!values) return []
+  const included: string[] = []
+  const seen = new Set<string>()
+  for (const rawValue of values) {
+    const value = rawValue.trim()
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
+      throw new CliError('--include must be a skill directory name', EXIT.usage, { include: rawValue })
+    }
+    if (!seen.has(value)) {
+      included.push(value)
+      seen.add(value)
+    }
+  }
+  return included
+}
+
+function selectIncludedSkillDirectories(paths: string[], included: string[], rootDir: string): string[] {
+  if (included.length === 0) return paths
+  const byName = new Map(paths.map(path => [basename(path), path]))
+  const missing = included.filter(name => !byName.has(name))
+  if (missing.length > 0) {
+    throw new CliError(`included skill directories not found: ${missing.join(', ')}`, EXIT.filesystem, {
+      path: rootDir,
+      missing
+    })
+  }
+  return included.map(name => byName.get(name)!)
 }
 
 async function resolveSyncContext(options: SyncCommonOptions): Promise<{

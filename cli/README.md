@@ -263,11 +263,19 @@ skillhub sync pull --namespace team-a --prune
 # Validate and upload every local skill for review
 skillhub sync push --all --namespace team-a --dry-run
 skillhub sync push --all --namespace team-a --submit-review
+
+# Validate only a reviewed subset from a larger collection
+skillhub sync push --all --include scanpy --include rdkit --namespace team-a --dry-run
 ```
 
 The default workspace is `<cwd>/.agents/skills`. Pull never overwrites local changes unless `--force` is supplied. Remote removals are reported as `orphaned` and are retained unless `--prune` is supplied. Both destructive cases still require explicit flags.
 
 Workspace push is non-overwriting: an existing namespace/slug/version is reported as a conflict, including versions that are still uploaded or pending review. Other skills in the same `--all` run continue processing.
+
+`--include <skill>` is repeatable and limits `sync push --all` to exact immediate directory names.
+Every requested directory is checked before validation starts; a missing or invalid name fails the
+command without sending a partial batch. This is useful for publishing a reviewed topical subset
+from a large Agent Skills collection while keeping the original workspace intact.
 
 Namespace sync writes `.skillhub/namespace-sync.json` in the workspace and per-skill `.skillhub/metadata.json` files. These files contain the registry coordinate, published version, aggregate fingerprint, and file hashes used by `status` and `diff`.
 
@@ -402,6 +410,7 @@ Update mechanism:
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
+| `skillhub sync <pull\|status\|diff\|push> [path] [--all] [--include <skill>] [--namespace <slug>] [--dir <path>] [--dry-run] [--submit-review] [--json]` | Synchronize a namespace workspace or publish a selected local subset |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |

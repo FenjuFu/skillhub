@@ -9,7 +9,7 @@ import { logoutCommand } from './commands/logout'
 import { publishCommand, type PublishCommandOptions } from './commands/publish'
 import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
-import { syncDiffCommand, syncPullCommand, syncPushCommand, syncStatusCommand, type SyncCommonOptions, type SyncPullOptions, type SyncPushOptions } from './commands/sync'
+import { syncDiffCommand, syncPullCommand, syncPushCommand, syncStatusCommand, type SyncPullOptions, type SyncPushOptions } from './commands/sync'
 import { updateCommand } from './commands/update'
 import { versionCommand } from './commands/version'
 import { whoamiCommand } from './commands/whoami'
@@ -255,27 +255,36 @@ cli
   .option('--prune', 'Remove managed local skills missing remotely')
   .option('--force', 'Overwrite local changes')
   .option('--all', 'Push every skill directory in the workspace')
+  .option('--include <skill>', 'Push only a named skill directory (repeatable; requires --all)')
   .option('--visibility <v>', 'Visibility (public|namespace-only|private)', { default: 'namespace-only' })
   .option('--dry-run', 'Validate without uploading')
   .option('--submit-review', 'Submit an uploaded version for review when required')
   .option('--registry <url>', 'Registry URL')
   .option('--token <token>', 'API token')
   .option('--json', 'Output JSON')
-  .action((action: string, path: string | undefined, options: SyncPullOptions & SyncPushOptions) => {
-    const command = action === 'pull'
-      ? () => syncPullCommand(options)
+  .action((action: string, path: string | undefined, options: SyncPullOptions
+    & Omit<SyncPushOptions, 'include'> & { include?: string | string[] }) => {
+    const { include, ...baseOptions } = options
+    const normalizedInclude = toArray(include)
+    const normalizedOptions: SyncPullOptions & SyncPushOptions = normalizedInclude
+      ? { ...baseOptions, include: normalizedInclude }
+      : baseOptions
+    const command = normalizedInclude && action !== 'push'
+      ? () => Promise.reject(new CliError('--include is only supported by sync push', EXIT.usage))
+      : action === 'pull'
+      ? () => syncPullCommand(normalizedOptions)
       : action === 'status'
-        ? () => syncStatusCommand(options as SyncCommonOptions)
+        ? () => syncStatusCommand(normalizedOptions)
         : action === 'diff'
-          ? () => syncDiffCommand(options as SyncCommonOptions)
+          ? () => syncDiffCommand(normalizedOptions)
           : action === 'push'
-            ? () => syncPushCommand(path, options)
+            ? () => syncPushCommand(path, normalizedOptions)
             : () => Promise.reject(new CliError(
                 `unknown sync action: ${action}`,
                 EXIT.usage,
                 { next: 'use pull, status, diff, or push' }
               ))
-    return runCommand(command, Boolean(options.json))
+    return runCommand(command, Boolean(normalizedOptions.json))
   })
 
 cli

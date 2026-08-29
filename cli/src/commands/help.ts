@@ -45,11 +45,12 @@ export const commands = {
   },
   sync: {
     summary: 'Synchronize and maintain namespace workspaces',
-    usage: 'skillhub sync <pull|status|diff|push> [options]',
+    usage: 'skillhub sync <pull|status|diff|push> [path] [--all] [--include <skill>] [options]',
     examples: [
       'skillhub sync pull --namespace team-a',
       'skillhub sync status --namespace team-a --json',
-      'skillhub sync push --all --namespace team-a --submit-review'
+      'skillhub sync push --all --namespace team-a --submit-review',
+      'skillhub sync push --all --include scanpy --include rdkit --namespace research --dry-run'
     ]
   },
   list: {

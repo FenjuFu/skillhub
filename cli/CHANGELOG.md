@@ -4,6 +4,12 @@ All notable CLI behavior changes are documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Add repeatable `sync push --all --include <skill>` filters so operators can
+  validate and publish a reviewed subset from a large local Skill collection.
+  Invalid or missing directory names fail before any package validation request.
+
 ### Fixed
 
 - Resolve `namespace/slug`, `@namespace/slug`, and `namespace--slug`

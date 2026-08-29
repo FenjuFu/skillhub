@@ -141,6 +141,82 @@ describe('sync command', () => {
     }
   })
 
+  test('push all validates only repeated include selections', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'scientific-skills')
+    for (const name of ['scanpy', 'rdkit', 'literature-review']) {
+      const skillDir = join(skillsDir, name)
+      await mkdir(skillDir, { recursive: true })
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        `---\nname: ${name}\ndescription: ${name}\nversion: 1.0.0\n---\n`
+      )
+    }
+    const registry = await startFakeRegistry({ token: 'token' })
+
+    try {
+      const result = await runCli([
+        'sync', 'push', '--all', '--include', 'rdkit', '--include', 'scanpy',
+        '--namespace', 'research', '--dir', skillsDir, '--dry-run',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+
+      expect(result.exitCode).toBe(0)
+      const items = JSON.parse(result.stdout).items as Array<{ slug: string; action: string }>
+      expect(items.map(item => item.slug)).toEqual(['rdkit', 'scanpy'])
+      expect(items.every(item => item.action === 'validated')).toBe(true)
+      expect(registry.received.validate?.fileName).toBe('scanpy.zip')
+      expect(registry.received.publish).toBeNull()
+    } finally {
+      registry.stop()
+      await rm(skillsDir, { recursive: true, force: true })
+    }
+  })
+
+  test('push all rejects missing includes before registry validation', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'scientific-skills')
+    await mkdir(join(skillsDir, 'scanpy'), { recursive: true })
+    await writeFile(
+      join(skillsDir, 'scanpy', 'SKILL.md'),
+      '---\nname: scanpy\ndescription: Scanpy\nversion: 1.0.0\n---\n'
+    )
+    const registry = await startFakeRegistry({ token: 'token' })
+
+    try {
+      const result = await runCli([
+        'sync', 'push', '--all', '--include', 'scanpy', '--include', 'missing-skill',
+        '--namespace', 'research', '--dir', skillsDir, '--dry-run',
+        '--registry', registry.url, '--token', 'token'
+      ], { HOME: env.home }, { cwd: env.cwd })
+
+      expect(result.exitCode).toBe(4)
+      expect(result.stderr).toContain('included skill directories not found: missing-skill')
+      expect(registry.received.validate).toBeNull()
+    } finally {
+      registry.stop()
+      await rm(skillsDir, { recursive: true, force: true })
+    }
+  })
+
+  test('include requires all', async () => {
+    const result = await runCli(['sync', 'push', 'scanpy', '--include', 'scanpy'])
+    expect(result.exitCode).toBe(5)
+    expect(result.stderr).toContain('--include requires --all')
+  })
+
+  test('include is rejected for non-push sync actions', async () => {
+    const result = await runCli(['sync', 'status', '--include', 'scanpy'])
+    expect(result.exitCode).toBe(5)
+    expect(result.stderr).toContain('--include is only supported by sync push')
+  })
+
+  test('include rejects path-like names before registry validation', async () => {
+    const result = await runCli(['sync', 'push', '--all', '--include', '../scanpy'])
+    expect(result.exitCode).toBe(5)
+    expect(result.stderr).toContain('--include must be a skill directory name')
+  })
+
   test('push dry-run uses strict validation without uploading', async () => {
     const env = await createTempHome()
     const skillDir = join(env.cwd, 'demo')

@@ -27,6 +27,18 @@ describe('help command', () => {
     expect(result.stdout).toContain('Namespace for local or remote delete')
   })
 
+  test('prints repeatable sync include filters in both help surfaces', async () => {
+    const detailed = await runCli(['help', 'sync'])
+    expect(detailed.exitCode).toBe(0)
+    expect(detailed.stdout).toContain('[--include <skill>]')
+    expect(detailed.stdout).toContain('--include scanpy --include rdkit')
+
+    const commandHelp = await runCli(['sync', '--help'])
+    expect(commandHelp.exitCode).toBe(0)
+    expect(commandHelp.stdout).toContain('--include <skill>')
+    expect(commandHelp.stdout).toContain('repeatable; requires --all')
+  })
+
   test('prints search help with optional query', async () => {
     const result = await runCli(['help', 'search'])
     expect(result.exitCode).toBe(0)
