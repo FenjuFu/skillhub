@@ -1,4 +1,0 @@
-interface:
-  display_name: "Publish SkillHub Release"
-  short_description: "Validate installs, HK domain deployment, and releases"
-  default_prompt: "Use $publish-skillhub-release to build, install, validate through the Hong Kong HTTPS domain, approve, publish, and post-verify a SkillHub release from an ordinary user perspective."
