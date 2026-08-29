@@ -86,6 +86,11 @@ if [ "$code" != '301' ]; then
   echo "bare prefix must 301-redirect, got: $code" >&2
   exit 1
 fi
+location=$(curl -s -o /dev/null -D - "$base/skillhub" | awk 'tolower($1) == "location:" { print $2 }' | tr -d '\r')
+if [ "$location" != '/skillhub/' ]; then
+  echo "bare prefix redirect must stay relative to preserve an upstream HTTPS scheme, got: $location" >&2
+  exit 1
+fi
 
 docker rm -f "$name" >/dev/null 2>&1 || true
 
