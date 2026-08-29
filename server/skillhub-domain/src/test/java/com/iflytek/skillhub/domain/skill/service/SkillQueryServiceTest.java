@@ -240,6 +240,46 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void installableNamespaceDiscoveryFiltersBeforePaginationAndSortsBySlug() throws Exception {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        setId(namespace, 1L);
+        Skill ready = new Skill(1L, "ready", "owner-1", SkillVisibility.NAMESPACE_ONLY);
+        setId(ready, 10L);
+        ready.setLatestVersionId(100L);
+        Skill draft = new Skill(1L, "draft", "owner-1", SkillVisibility.NAMESPACE_ONLY);
+        setId(draft, 11L);
+        draft.setLatestVersionId(101L);
+        Skill publicReady = new Skill(1L, "public-ready", "owner-2", SkillVisibility.PUBLIC);
+        setId(publicReady, 12L);
+        publicReady.setLatestVersionId(102L);
+
+        SkillVersion readyVersion = new SkillVersion(10L, "1.0.0", "owner-1");
+        setId(readyVersion, 100L);
+        readyVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        readyVersion.setDownloadReady(true);
+        SkillVersion draftVersion = new SkillVersion(11L, "1.0.0", "owner-1");
+        setId(draftVersion, 101L);
+        draftVersion.setStatus(SkillVersionStatus.DRAFT);
+        SkillVersion publicReadyVersion = new SkillVersion(12L, "2.0.0", "owner-2");
+        setId(publicReadyVersion, 102L);
+        publicReadyVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        publicReadyVersion.setDownloadReady(true);
+
+        when(namespaceRepository.findBySlug("team-a")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE))
+                .thenReturn(List.of(ready, draft, publicReady));
+        when(skillVersionRepository.findByIdIn(List.of(100L, 101L, 102L)))
+                .thenReturn(List.of(readyVersion, draftVersion, publicReadyVersion));
+
+        Page<Skill> result = service.listInstallableSkillsByNamespace(
+                "team-a", "viewer", Map.of(1L, NamespaceRole.MEMBER), PageRequest.of(0, 1));
+
+        assertEquals(2, result.getTotalElements());
+        assertEquals("public-ready", result.getContent().getFirst().getSlug());
+        assertTrue(result.hasNext());
+    }
+
+    @Test
     void versionContentRejectsPublicArchivedSkillForNonManager() throws Exception {
         Namespace namespace = new Namespace("global", "Global", "owner-1");
         setId(namespace, 1L);

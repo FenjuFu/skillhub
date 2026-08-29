@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 class RouteSecurityPolicyRegistryTest {
 
@@ -98,6 +99,7 @@ class RouteSecurityPolicyRegistryTest {
     @Test
     void apiTokenPolicySupportsNativeCliRoutes() {
         assertTrue(registry.authorizeApiToken("GET", "/api/cli/v1/auth/whoami", Set.of()).allowed());
+        assertTrue(registry.authorizeApiToken("GET", "/api/cli/v1/namespaces/team-a/skills", Set.of()).allowed());
         assertTrue(registry.authorizeApiToken("GET", "/api/cli/v1/skills/search", Set.of()).allowed());
         assertTrue(registry.authorizeApiToken("GET", "/api/cli/v1/skills/global/demo/resolve", Set.of()).allowed());
         assertFalse(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish", Set.of()).allowed());
@@ -105,6 +107,16 @@ class RouteSecurityPolicyRegistryTest {
         assertFalse(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish/validate", Set.of()).allowed());
         assertTrue(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish/validate", Set.of("skill:publish")).allowed());
         assertTrue(registry.authorizeApiToken("DELETE", "/api/cli/v1/skills/global/demo", Set.of("skill:delete")).allowed());
+    }
+
+    @Test
+    void routeAuthorizationRequiresAuthenticationForNativeCliNamespaceSync() {
+        boolean matched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/cli/v1/namespaces/*/skills".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED);
+
+        assertTrue(matched);
     }
 
     @Test
@@ -134,6 +146,18 @@ class RouteSecurityPolicyRegistryTest {
     void shouldProjectRequestContext_onlyForApiRoutes() {
         assertTrue(registry.shouldProjectRequestContext("/api/web/namespaces/team-a"));
         assertFalse(registry.shouldProjectRequestContext("/assets/index.css"));
+    }
+
+    @Test
+    void requestPathUsesApplicationRouteBehindForwardedPrefix() {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/skillhub/api/cli/v1/auth/whoami"
+        );
+        request.setContextPath("/skillhub");
+        request.setServletPath("/api/cli/v1/auth/whoami");
+
+        assertEquals("/api/cli/v1/auth/whoami", RouteSecurityPolicyRegistry.requestPath(request));
     }
 
     @Test

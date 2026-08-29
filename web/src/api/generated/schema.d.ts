@@ -3348,6 +3348,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cli/v1/namespaces/{namespace}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSkills_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cli/v1/auth/whoami": {
         parameters: {
             query?: never;
@@ -4347,6 +4363,8 @@ export interface components {
             namespace?: string;
             /** Format: date-time */
             updatedAt?: string;
+            ownerId?: string;
+            ownerDisplayName?: string;
             canSubmitPromotion?: boolean;
             headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
             publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
@@ -5329,6 +5347,31 @@ export interface components {
             total?: number;
             /** Format: int32 */
             limit?: number;
+        };
+        ApiResponseCliNamespaceSyncResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["CliNamespaceSyncResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        CliNamespaceSyncItemResponse: {
+            namespace?: string;
+            slug?: string;
+            version?: string;
+            /** Format: int64 */
+            versionId?: number;
+            fingerprint?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            visibility?: string;
+            downloadUrl?: string;
+        };
+        CliNamespaceSyncResponse: {
+            items?: components["schemas"]["CliNamespaceSyncItemResponse"][];
+            nextCursor?: string;
         };
         ApiResponseCliWhoAmIResponse: {
             /** Format: int32 */
@@ -11353,6 +11396,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseCliSearchResponse"];
+                };
+            };
+        };
+    };
+    listSkills_1: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseCliNamespaceSyncResponse"];
                 };
             };
         };

@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.policy;
 
 import java.util.List;
 import java.util.Set;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -83,6 +84,7 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/namespaces/*"),
             RouteAuthorizationPolicy.authenticated(null, "/api/v1/admin/**"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/cli/v1/auth/whoami"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/cli/v1/namespaces/*/skills"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/cli/v1/skills/search"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/cli/v1/skills/*/*/resolve"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/cli/v1/skills/*/*/download"),
@@ -133,6 +135,7 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/publish", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/publish", "skill:publish"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/auth/whoami"),
+            ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/namespaces/*/skills"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/skills/search"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/skills/*/*/resolve"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/skills/*/*/download"),
@@ -180,6 +183,22 @@ public class RouteSecurityPolicyRegistry {
      */
     public static String routeKey(HttpMethod method, String pattern) {
         return (method == null ? "ANY" : method.name()) + " " + pattern;
+    }
+
+    /**
+     * Returns the application-relative request path used by security policies.
+     *
+     * <p>When a reverse proxy supplies {@code X-Forwarded-Prefix}, Spring exposes
+     * that external prefix through {@code getRequestURI()} while keeping the
+     * application route in {@code getServletPath()}. Security filters must match
+     * the latter or bearer authentication is skipped for sub-path deployments.</p>
+     */
+    public static String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath != null && !servletPath.isBlank()) {
+            return servletPath;
+        }
+        return request.getRequestURI();
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {
