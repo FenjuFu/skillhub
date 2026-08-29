@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -284,6 +285,47 @@ public class SkillQueryService {
         List<Skill> pageContent = accessibleSkills.subList(start, end);
 
         return new PageImpl<>(pageContent, pageable, accessibleSkills.size());
+    }
+
+    /**
+     * Lists only active, visible skills whose latest version can be installed.
+     *
+     * <p>This is intentionally separate from {@link #listSkillsByNamespace}:
+     * the portal discovery method also exposes skills without a published
+     * version, while the CLI sync manifest must contain concrete downloadable
+     * versions. Filtering happens before pagination so cursors remain stable.
+     */
+    public Page<Skill> listInstallableSkillsByNamespace(
+            String namespaceSlug,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Pageable pageable) {
+
+        Namespace namespace = findNamespace(namespaceSlug);
+        List<Skill> accessibleSkills = skillRepository
+                .findByNamespaceIdAndStatus(namespace.getId(), SkillStatus.ACTIVE)
+                .stream()
+                .filter(skill -> visibilityChecker.canAccess(skill, currentUserId, userNsRoles))
+                .toList();
+
+        Map<Long, SkillVersion> latestVersions = skillVersionRepository.findByIdIn(
+                        accessibleSkills.stream()
+                                .map(Skill::getLatestVersionId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
+
+        List<Skill> installableSkills = accessibleSkills.stream()
+                .filter(skill -> SkillInstallability.isInstallableVersion(latestVersions.get(skill.getLatestVersionId())))
+                .sorted(Comparator.comparing(Skill::getSlug)
+                        .thenComparing(Skill::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        int start = Math.min((int) pageable.getOffset(), installableSkills.size());
+        int end = Math.min(start + pageable.getPageSize(), installableSkills.size());
+        return new PageImpl<>(installableSkills.subList(start, end), pageable, installableSkills.size());
     }
 
     /**
