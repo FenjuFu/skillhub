@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 class RouteSecurityPolicyRegistryTest {
 
@@ -145,6 +146,18 @@ class RouteSecurityPolicyRegistryTest {
     void shouldProjectRequestContext_onlyForApiRoutes() {
         assertTrue(registry.shouldProjectRequestContext("/api/web/namespaces/team-a"));
         assertFalse(registry.shouldProjectRequestContext("/assets/index.css"));
+    }
+
+    @Test
+    void requestPathUsesApplicationRouteBehindForwardedPrefix() {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/skillhub/api/cli/v1/auth/whoami"
+        );
+        request.setContextPath("/skillhub");
+        request.setServletPath("/api/cli/v1/auth/whoami");
+
+        assertEquals("/api/cli/v1/auth/whoami", RouteSecurityPolicyRegistry.requestPath(request));
     }
 
     @Test

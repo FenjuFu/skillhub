@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.policy;
 
 import java.util.List;
 import java.util.Set;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -182,6 +183,22 @@ public class RouteSecurityPolicyRegistry {
      */
     public static String routeKey(HttpMethod method, String pattern) {
         return (method == null ? "ANY" : method.name()) + " " + pattern;
+    }
+
+    /**
+     * Returns the application-relative request path used by security policies.
+     *
+     * <p>When a reverse proxy supplies {@code X-Forwarded-Prefix}, Spring exposes
+     * that external prefix through {@code getRequestURI()} while keeping the
+     * application route in {@code getServletPath()}. Security filters must match
+     * the latter or bearer authentication is skipped for sub-path deployments.</p>
+     */
+    public static String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath != null && !servletPath.isBlank()) {
+            return servletPath;
+        }
+        return request.getRequestURI();
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {

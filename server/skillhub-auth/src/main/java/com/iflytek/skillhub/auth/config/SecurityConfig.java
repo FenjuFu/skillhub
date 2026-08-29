@@ -103,7 +103,7 @@ public class SecurityConfig {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName(null);
         RequestMatcher csrfIgnoreMatcher = request -> {
-            String path = request.getRequestURI();
+            String path = RouteSecurityPolicyRegistry.requestPath(request);
             String authorization = request.getHeader("Authorization");
             return routeSecurityPolicyRegistry.shouldIgnoreCsrf(request.getMethod(), path, authorization, hasSessionCookie(request));
         };
