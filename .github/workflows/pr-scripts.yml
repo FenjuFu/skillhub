@@ -7,6 +7,7 @@ on:
       - '.env.release.example'
       - '.env.release.draft'
       - 'compose.release.yml'
+      - 'server/Dockerfile'
       - 'Makefile'
       - 'web/Dockerfile'
       - 'web/nginx.conf.template'
@@ -43,4 +44,5 @@ jobs:
       - run: bash scripts/tests/web-base-path-routing-test.sh
       - run: bash scripts/tests/web-base-path-nginx-smoke-test.sh
       - run: bash scripts/tests/dev-web-host-test.sh
+      - run: bash scripts/tests/server-image-compat-test.sh
       - run: bash scripts/tests/workflow-security-test.sh
