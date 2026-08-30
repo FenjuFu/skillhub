@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -128,7 +129,7 @@ public class SkillLifecycleAppService {
                 null,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                "{\"version\":\"" + version.replace("\"", "\\\"") + "\"}"
+                AuditDetail.of("version", version)
         );
         return new SkillLifecycleMutationResponse(
                 skill.getId(),
@@ -165,8 +166,7 @@ public class SkillLifecycleAppService {
                 null,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                "{\"sourceVersion\":\"" + version.replace("\"", "\\\"")
-                        + "\",\"targetVersion\":\"" + targetVersion.replace("\"", "\\\"") + "\"}"
+                AuditDetail.of("sourceVersion", version, "targetVersion", targetVersion)
         );
         return new SkillLifecycleMutationResponse(
                 result.skillId(),
@@ -201,7 +201,7 @@ public class SkillLifecycleAppService {
                 null,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                "{\"version\":\"" + version.replace("\"", "\\\"") + "\",\"targetVisibility\":\"" + targetVisibility + "\"}"
+                AuditDetail.of("version", version, "targetVisibility", targetVisibility)
         );
         return new SkillLifecycleMutationResponse(
                 skill.getId(),
@@ -234,7 +234,7 @@ public class SkillLifecycleAppService {
                 null,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                "{\"version\":\"" + version.replace("\"", "\\\"") + "\"}"
+                AuditDetail.of("version", version)
         );
         return new SkillLifecycleMutationResponse(
                 skill.getId(),

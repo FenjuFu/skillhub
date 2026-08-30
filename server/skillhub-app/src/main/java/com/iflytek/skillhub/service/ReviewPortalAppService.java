@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -62,7 +63,7 @@ public class ReviewPortalAppService {
                 normalizeRoles(userNsRoles),
                 platformRoles(userId)
         );
-        recordAudit("REVIEW_SUBMIT", userId, task.getId(), auditContext, "{\"skillVersionId\":" + skillVersionId + "}");
+        recordAudit("REVIEW_SUBMIT", userId, task.getId(), auditContext, AuditDetail.of("skillVersionId", skillVersionId));
         return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
@@ -109,7 +110,7 @@ public class ReviewPortalAppService {
                 userId,
                 reviewTaskId,
                 auditContext,
-                "{\"skillVersionId\":" + task.getSkillVersionId() + "}"
+                AuditDetail.of("skillVersionId", task.getSkillVersionId())
         );
     }
 
@@ -270,6 +271,6 @@ public class ReviewPortalAppService {
         if (comment == null || comment.isBlank()) {
             return null;
         }
-        return "{\"comment\":\"" + comment.replace("\"", "\\\"") + "\"}";
+        return AuditDetail.of("comment", comment);
     }
 }
