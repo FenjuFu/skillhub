@@ -7,14 +7,17 @@ import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
 import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
 import com.iflytek.skillhub.auth.mock.MockAuthFilter;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
+import com.iflytek.skillhub.auth.session.ExpiredPublicSessionFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenAuthenticationFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenScopeFilter;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -28,6 +31,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -135,6 +139,11 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .invalidSessionStrategy((request, response) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"code\":401,\"msg\":\"Session expired\"}");
+                })
             )
             .exceptionHandling(exceptions -> exceptions
                 .accessDeniedHandler(apiAccessDeniedHandler)
@@ -154,6 +163,7 @@ public class SecurityConfig {
                 .invalidateHttpSession(true)
                 .deleteCookies("SESSION")
             )
+            .addFilterBefore(new ExpiredPublicSessionFilter(routeSecurityPolicyRegistry), CsrfFilter.class)
             .addFilterBefore(apiTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(apiTokenScopeFilter, ApiTokenAuthenticationFilter.class);
 
