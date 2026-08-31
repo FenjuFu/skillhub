@@ -171,6 +171,21 @@ public class RouteSecurityPolicyRegistry {
     }
 
     /**
+     * Resolves the first matching authorization policy for a request. Routes not
+     * listed in the catalog follow Spring Security's authenticated fallback.
+     */
+    public AccessLevel accessLevel(String method, String path) {
+        if (path == null) {
+            return AccessLevel.AUTHENTICATED;
+        }
+        return AUTHORIZATION_POLICIES.stream()
+                .filter(policy -> policy.matches(method, path, pathMatcher))
+                .map(RouteAuthorizationPolicy::accessLevel)
+                .findFirst()
+                .orElse(AccessLevel.AUTHENTICATED);
+    }
+
+    /**
      * Authorization routes that are deliberately unreachable with an API token.
      */
     public Set<String> sessionOnlyRoutes() {
@@ -282,6 +297,13 @@ public class RouteSecurityPolicyRegistry {
             return method == null
                     ? new AntPathRequestMatcher(pattern)
                     : new AntPathRequestMatcher(pattern, method.name());
+        }
+
+        boolean matches(String requestMethod, String requestPath, AntPathMatcher matcher) {
+            if (method != null && (requestMethod == null || !method.name().equalsIgnoreCase(requestMethod))) {
+                return false;
+            }
+            return matcher.match(pattern, requestPath);
         }
     }
 

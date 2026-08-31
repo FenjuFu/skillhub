@@ -19,6 +19,22 @@ class RouteSecurityPolicyRegistryTest {
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
     @Test
+    void accessLevel_respectsMethodSpecificPublicRoutesAndProtectedFallback() {
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/v1/skills"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("POST", "/api/v1/skills"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("GET", "/api/v1/unlisted"));
+    }
+
+    @Test
+    void accessLevel_matchesPublicSubpaths() {
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/v1/resolve/team/demo"));
+    }
+
+    @Test
     void authorizeApiToken_requiresPublishScopeForPublishEndpoints() {
         var denied = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:read"));
         var allowed = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:publish"));
