@@ -108,17 +108,19 @@ class SkillPackageValidatorTest {
     void acceptsAllowedExtensionRegardlessOfFilenameCase() {
         SkillPackageValidator customValidator = new SkillPackageValidator(
                 new SkillMetadataParser(), 100, SkillPackagePolicy.MAX_SINGLE_FILE_SIZE,
-                SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE, Set.of(".md", "Makefile"));
+                SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE, Set.of(".md", "Makefile", "Dockerfile"));
         List<PackageEntry> entries = List.of(
                 skillMdEntry(),
-                new PackageEntry("Makefile", "build:\n".getBytes(), 7, "text/plain")
+                new PackageEntry("README.MD", "# Readme\n".getBytes(), 9, "text/markdown"),
+                new PackageEntry("MAKEFILE", "build:\n".getBytes(), 7, "text/plain"),
+                new PackageEntry("tools/DOCKERFILE", "FROM scratch\n".getBytes(), 13, "text/plain")
         );
 
         ValidationResult result = customValidator.validate(entries);
 
         assertTrue(result.passed());
         assertTrue(result.warnings().stream()
-                .noneMatch(warning -> warning.contains("Disallowed file extension: Makefile")));
+                .noneMatch(warning -> warning.contains("Disallowed file extension")));
     }
 
     @Test
