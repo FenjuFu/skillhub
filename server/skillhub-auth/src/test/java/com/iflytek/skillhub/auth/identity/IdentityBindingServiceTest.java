@@ -33,6 +33,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,7 +61,7 @@ class IdentityBindingServiceTest {
     @BeforeEach
     void setUp() {
         service = new IdentityBindingService(bindingRepo, userRepo, roleBindingRepo,
-                globalNamespaceMembershipService, eventPublisher);
+                globalNamespaceMembershipService, eventPublisher, new ImmediateTransactionOperations());
     }
 
     @Test
@@ -80,7 +83,7 @@ class IdentityBindingServiceTest {
         ArgumentCaptor<UserAccount> userCaptor = ArgumentCaptor.forClass(UserAccount.class);
         verify(userRepo).save(userCaptor.capture());
         verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
-        verify(bindingRepo).save(any(IdentityBinding.class));
+        verify(bindingRepo).saveAndFlush(any(IdentityBinding.class));
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.oauthProvider()).isEqualTo("github");
     }
@@ -360,5 +363,73 @@ class IdentityBindingServiceTest {
         ArgumentCaptor<UserAccount> userCaptor = ArgumentCaptor.forClass(UserAccount.class);
         verify(userRepo).save(userCaptor.capture());
         assertThat(userCaptor.getValue().getEmail()).isNull();
+    }
+
+    @Test
+    void bindOrCreate_concurrentInsertReturnsWinningPrincipal() {
+        OAuthClaims claims = new OAuthClaims(
+                "github", "gh_1", "alice@example.com", true, "alice", Map.of()
+        );
+        IdentityBinding winningBinding = new IdentityBinding("usr_winner", "github", "gh_1", "alice");
+        UserAccount winningUser = new UserAccount("usr_winner", "alice", "alice@example.com", null);
+        winningUser.setStatus(UserStatus.ACTIVE);
+
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1"))
+                .thenReturn(Optional.empty(), Optional.of(winningBinding));
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(bindingRepo.saveAndFlush(any(IdentityBinding.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate binding"));
+        when(userRepo.findById("usr_winner")).thenReturn(Optional.of(winningUser));
+        when(roleBindingRepo.findByUserId("usr_winner")).thenReturn(List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.userId()).isEqualTo("usr_winner");
+        assertThat(principal.platformRoles()).containsExactly("USER");
+        verify(globalNamespaceMembershipService, never()).ensureMember(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void bindOrCreate_rethrowsUnexpectedIntegrityFailureWhenNoWinnerExists() {
+        OAuthClaims claims = new OAuthClaims(
+                "github", "gh_1", "alice@example.com", true, "alice", Map.of()
+        );
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1"))
+                .thenReturn(Optional.empty(), Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(bindingRepo.saveAndFlush(any(IdentityBinding.class)))
+                .thenThrow(new DataIntegrityViolationException("unrelated integrity failure"));
+
+        assertThatThrownBy(() -> service.bindOrCreate(claims, UserStatus.ACTIVE))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("unrelated integrity failure");
+    }
+
+    @Test
+    void createPendingUserIfAbsent_concurrentInsertUsesWinningAccountState() {
+        OAuthClaims claims = new OAuthClaims(
+                "github", "gh_1", "alice@example.com", true, "alice", Map.of()
+        );
+        IdentityBinding winningBinding = new IdentityBinding("usr_winner", "github", "gh_1", "alice");
+        UserAccount winningUser = new UserAccount("usr_winner", "alice", "alice@example.com", null);
+        winningUser.setStatus(UserStatus.PENDING);
+
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1"))
+                .thenReturn(Optional.empty(), Optional.of(winningBinding));
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(bindingRepo.saveAndFlush(any(IdentityBinding.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate binding"));
+        when(userRepo.findById("usr_winner")).thenReturn(Optional.of(winningUser));
+
+        assertThatThrownBy(() -> service.createPendingUserIfAbsent(claims))
+                .isInstanceOf(AccountPendingException.class);
+    }
+
+    private static final class ImmediateTransactionOperations implements TransactionOperations {
+        @Override
+        public <T> T execute(TransactionCallback<T> action) {
+            return action.doInTransaction(null);
+        }
     }
 }
