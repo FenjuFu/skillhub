@@ -424,7 +424,11 @@ public class SkillPublishService {
                     Skill newSkill = new Skill(namespace.getId(), skillSlug, publisherId, visibility);
                     newSkill.setCreatedBy(publisherId);
                     try {
-                        return skillRepository.save(newSkill);
+                        Skill savedSkill = skillRepository.save(newSkill);
+                        // save() may defer the unique-constraint check until transaction commit.
+                        // Flush here so this boundary can translate the coordinate race.
+                        skillRepository.flush();
+                        return savedSkill;
                     } catch (DataIntegrityViolationException ex) {
                         // A concurrent publish for the same (namespace, slug, owner) coordinate inserted
                         // the skill first and won the unique-constraint race. Surface a deterministic
@@ -486,6 +490,8 @@ public class SkillPublishService {
 
         try {
             version = skillVersionRepository.save(version);
+            // Detect the version-coordinate race before object storage writes begin.
+            skillVersionRepository.flush();
         } catch (DataIntegrityViolationException ex) {
             // A concurrent publish inserted the same (skillId, version) coordinate first and won the
             // unique-constraint race. Surface a deterministic business conflict rather than an HTTP 500.

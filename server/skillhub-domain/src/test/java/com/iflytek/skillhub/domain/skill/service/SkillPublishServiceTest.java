@@ -476,7 +476,7 @@ class SkillPublishServiceTest {
         verify(reviewTaskRepository).deleteBySkillVersionIdIn(List.of(8L));
         verify(skillFileRepository).deleteByVersionId(8L);
         verify(skillVersionRepository).delete(rejectedVersion);
-        verify(skillVersionRepository).flush();
+        verify(skillVersionRepository, times(2)).flush();
         verify(objectStorageService).deleteObjects(List.of("skills/1/8/SKILL.md", "packages/1/8/bundle.zip"));
 
         ArgumentCaptor<ReviewTask> reviewTaskCaptor = ArgumentCaptor.forClass(ReviewTask.class);
@@ -1779,13 +1779,15 @@ class SkillPublishServiceTest {
         when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId)))
                 .thenReturn(Optional.empty());
         // A concurrent publish inserts the same (namespace, slug, owner) coordinate first and wins the race.
-        when(skillRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(skillRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new DataIntegrityViolationException("duplicate key")).when(skillRepository).flush();
 
         DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () -> service.publishFromEntries(
                 namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
 
         assertEquals("error.skill.publish.concurrentConflict", exception.messageCode());
         assertEquals("test-skill", String.valueOf(exception.messageArgs()[0]));
+        verify(skillRepository).flush();
         verify(skillVersionRepository, never()).save(any(SkillVersion.class));
     }
 
@@ -1816,13 +1818,14 @@ class SkillPublishServiceTest {
                 .thenReturn(Optional.of(skill));
         when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("1.0.0"))).thenReturn(Optional.empty());
         // A concurrent publish inserts the same (skillId, version) coordinate first and wins the race.
-        when(skillVersionRepository.save(any(SkillVersion.class)))
-                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new DataIntegrityViolationException("duplicate key")).when(skillVersionRepository).flush();
 
         DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () -> service.publishFromEntries(
                 namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
 
         assertEquals("error.skill.publish.concurrentConflict", exception.messageCode());
+        verify(skillVersionRepository).flush();
         // Nothing should be uploaded to object storage once the coordinate race is lost.
         verify(objectStorageService, never()).putObject(anyString(), any(), anyLong(), anyString());
     }
