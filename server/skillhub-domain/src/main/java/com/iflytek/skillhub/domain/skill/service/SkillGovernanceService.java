@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.event.SkillStatusChangedEvent;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -205,7 +206,7 @@ public class SkillGovernanceService {
                 null,
                 clientIp,
                 userAgent,
-                "{\"version\":\"" + version.getVersion().replace("\"", "\\\"") + "\"}"
+                AuditDetail.of("version", version.getVersion())
         );
     }
 
@@ -311,7 +312,7 @@ public class SkillGovernanceService {
         if (reason == null || reason.isBlank()) {
             return null;
         }
-        return "{\"reason\":\"" + reason.replace("\"", "\\\"") + "\"}";
+        return AuditDetail.of("reason", reason);
     }
 
     private Instant currentInstant() {
