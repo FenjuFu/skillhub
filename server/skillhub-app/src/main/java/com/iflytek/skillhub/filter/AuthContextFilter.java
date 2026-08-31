@@ -59,8 +59,8 @@ public class AuthContextFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
-        if (!routeSecurityPolicyRegistry.shouldProjectRequestContext(
-                RouteSecurityPolicyRegistry.requestPath(request))) {
+        String requestPath = RouteSecurityPolicyRegistry.requestPath(request);
+        if (!routeSecurityPolicyRegistry.shouldProjectRequestContext(requestPath)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -68,6 +68,10 @@ public class AuthContextFilter extends OncePerRequestFilter {
         if (principal != null) {
             if (isInactiveUser(principal.userId())) {
                 clearAuthentication(request);
+                if (isAnonymousFallbackAllowed(request, requestPath)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 objectMapper.writeValue(
@@ -106,7 +110,12 @@ public class AuthContextFilter extends OncePerRequestFilter {
         }
         session.removeAttribute("platformPrincipal");
         session.removeAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
-        session.invalidate();
+    }
+
+    private boolean isAnonymousFallbackAllowed(HttpServletRequest request, String requestPath) {
+        return !"/api/v1/auth/me".equals(requestPath)
+                && routeSecurityPolicyRegistry.accessLevel(request.getMethod(), requestPath)
+                == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL;
     }
 
     private PlatformPrincipal resolvePrincipal(HttpServletRequest request) {
