@@ -5,6 +5,7 @@ import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.domain.audit.AuditLogRepository;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
@@ -32,6 +33,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
@@ -90,6 +92,9 @@ class PromotionApprovalFlowIntegrationTest {
 
     @MockBean
     private NotificationDispatcher notificationDispatcher;
+
+    @MockBean
+    private AuditLogRepository auditLogRepository;
 
     @BeforeEach
     void setUp() {
@@ -193,6 +198,29 @@ class PromotionApprovalFlowIntegrationTest {
                 .orElseThrow();
         assertThat(savedRequest.getStatus()).isEqualTo(ReviewTaskStatus.PENDING);
         assertThat(savedRequest.getTargetSkillId()).isNull();
+    }
+
+    @Test
+    void approvePromotion_rollsBackTargetCopyWhenAuditPersistenceFails() throws Exception {
+        PromotionGraph graph = createPromotionGraph();
+        when(auditLogRepository.save(any()))
+                .thenThrow(new DataIntegrityViolationException("forced audit failure"));
+
+        mockMvc.perform(post("/api/web/promotions/" + graph.request().getId() + "/approve")
+                        .contentType("application/json")
+                        .content("{\"comment\":\"ship it\"}")
+                        .with(authentication(portalAuth(REVIEWER_ID, "SUPER_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().isInternalServerError());
+
+        PromotionRequest savedRequest = promotionRequestRepository.findAllById(List.of(graph.request().getId()))
+                .stream()
+                .findFirst()
+                .orElseThrow();
+        assertThat(savedRequest.getStatus()).isEqualTo(ReviewTaskStatus.PENDING);
+        assertThat(savedRequest.getTargetSkillId()).isNull();
+        assertThat(skillRepository.findByNamespaceIdAndSlug(
+                graph.globalNamespace().getId(), graph.sourceSkill().getSlug())).isEmpty();
     }
 
     @Test

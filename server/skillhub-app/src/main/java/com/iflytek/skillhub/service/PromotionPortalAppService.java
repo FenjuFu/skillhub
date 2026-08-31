@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PromotionPortalAppService {
@@ -49,6 +50,7 @@ public class PromotionPortalAppService {
         this.requestIdAccessor = requestIdAccessor;
     }
 
+    @Transactional
     public PromotionResponseDto submitPromotion(Long sourceSkillId,
                                                 Long sourceVersionId,
                                                 Long targetNamespaceId,
@@ -73,6 +75,7 @@ public class PromotionPortalAppService {
         return governanceQueryRepository.getPromotionResponse(promotion);
     }
 
+    @Transactional
     public PromotionResponseDto approvePromotion(Long promotionId,
                                                  String comment,
                                                  String userId,
@@ -88,6 +91,7 @@ public class PromotionPortalAppService {
         return governanceQueryRepository.getPromotionResponse(promotion);
     }
 
+    @Transactional
     public PromotionResponseDto rejectPromotion(Long promotionId,
                                                 String comment,
                                                 String userId,

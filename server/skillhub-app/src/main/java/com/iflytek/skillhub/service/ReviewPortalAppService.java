@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewPortalAppService {
@@ -53,6 +54,7 @@ public class ReviewPortalAppService {
         this.requestIdAccessor = requestIdAccessor;
     }
 
+    @Transactional
     public ReviewTaskResponse submitReview(Long skillVersionId,
                                            String userId,
                                            Map<Long, NamespaceRole> userNsRoles,
@@ -67,6 +69,7 @@ public class ReviewPortalAppService {
         return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
+    @Transactional
     public ReviewTaskResponse approveReview(Long reviewTaskId,
                                             String comment,
                                             String userId,
@@ -83,6 +86,7 @@ public class ReviewPortalAppService {
         return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
+    @Transactional
     public ReviewTaskResponse rejectReview(Long reviewTaskId,
                                            String comment,
                                            String userId,
@@ -99,6 +103,7 @@ public class ReviewPortalAppService {
         return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
+    @Transactional
     public void withdrawReview(Long reviewTaskId,
                                String userId,
                                AuditRequestContext auditContext) {
