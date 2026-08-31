@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApprovePromotion, usePromotionList, useRejectPromotion } from '@/features/promotion/use-promotion-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
@@ -79,6 +79,18 @@ function PromotionPagination({ data, onPageChange }: { data: PromotionPage; onPa
   return <Pagination page={data.page} totalPages={totalPages} onPageChange={onPageChange} />
 }
 
+function useClampPromotionPage(data: PromotionPage | undefined, page: number, onPageChange: (page: number) => void) {
+  useEffect(() => {
+    if (!data) {
+      return
+    }
+    const totalPages = data.size > 0 ? Math.ceil(data.total / data.size) : 0
+    if (page > 0 && page >= totalPages) {
+      onPageChange(Math.max(0, totalPages - 1))
+    }
+  }, [data, onPageChange, page])
+}
+
 function PendingPromotionCard({
   item,
   comment,
@@ -141,6 +153,7 @@ function PendingPromotionList({ page, onPageChange }: { page: number; onPageChan
   const approveMutation = useApprovePromotion()
   const rejectMutation = useRejectPromotion()
   const [commentById, setCommentById] = useState<Record<number, string>>({})
+  useClampPromotionPage(data, page, onPageChange)
 
   if (isLoading) {
     return <div className="h-32 animate-shimmer rounded-xl" />
@@ -192,6 +205,7 @@ function PromotionHistoryTable({
   })
   const nextDirection = sortDirection === 'DESC' ? 'ASC' : 'DESC'
   const sortLabel = nextDirection === 'ASC' ? t('promotions.sortReviewedTimeAsc') : t('promotions.sortReviewedTimeDesc')
+  useClampPromotionPage(data, page, onPageChange)
 
   if (isLoading) {
     return (

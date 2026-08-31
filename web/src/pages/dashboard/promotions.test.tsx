@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PromotionStatus, PromotionTask } from '@/api/types'
 
@@ -244,6 +244,34 @@ describe('PromotionsPage', () => {
       sortDirection: 'DESC',
     })
     expect(screen.getByRole('button', { name: 'pagination:0/2' })).toBeTruthy()
+  })
+
+  it('returns to the last valid page when a mutation empties the current page', async () => {
+    const pending = createPromotion()
+    mocks.usePromotionList.mockImplementation((params: { status?: PromotionStatus; page?: number } = {}) => {
+      const page = params.page ?? 0
+      return {
+        data: {
+          items: params.status === 'PENDING' && page === 0 ? [pending] : [],
+          total: params.status === 'PENDING' ? 20 : 0,
+          page,
+          size: 20,
+        },
+        isLoading: false,
+      }
+    })
+    render(<PromotionsPage />)
+
+    mocks.paginationProps[0]?.onPageChange(1)
+
+    await waitFor(() => {
+      expect(mocks.usePromotionList).toHaveBeenLastCalledWith({
+        status: 'PENDING',
+        page: 0,
+        size: 20,
+      })
+    })
+    expect(screen.getByText('Knowledge Helper')).toBeTruthy()
   })
 
   it('renders approved history as a sortable table', () => {
