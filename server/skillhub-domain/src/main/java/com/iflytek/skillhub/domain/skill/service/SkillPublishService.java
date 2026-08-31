@@ -28,6 +28,7 @@ import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -422,7 +423,14 @@ public class SkillPublishService {
                 .orElseGet(() -> {
                     Skill newSkill = new Skill(namespace.getId(), skillSlug, publisherId, visibility);
                     newSkill.setCreatedBy(publisherId);
-                    return skillRepository.save(newSkill);
+                    try {
+                        return skillRepository.save(newSkill);
+                    } catch (DataIntegrityViolationException ex) {
+                        // A concurrent publish for the same (namespace, slug, owner) coordinate inserted
+                        // the skill first and won the unique-constraint race. Surface a deterministic
+                        // business conflict instead of leaking the violation as an HTTP 500.
+                        throw new DomainBadRequestException("error.skill.publish.concurrentConflict", skillSlug);
+                    }
                 });
 
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
@@ -476,7 +484,13 @@ public class SkillPublishService {
             throw new IllegalStateException("Failed to serialize metadata", e);
         }
 
-        version = skillVersionRepository.save(version);
+        try {
+            version = skillVersionRepository.save(version);
+        } catch (DataIntegrityViolationException ex) {
+            // A concurrent publish inserted the same (skillId, version) coordinate first and won the
+            // unique-constraint race. Surface a deterministic business conflict rather than an HTTP 500.
+            throw new DomainBadRequestException("error.skill.publish.concurrentConflict", skillSlug);
+        }
 
         // 9. Upload each file to storage and compute SHA-256
         List<SkillFile> skillFiles = new ArrayList<>();

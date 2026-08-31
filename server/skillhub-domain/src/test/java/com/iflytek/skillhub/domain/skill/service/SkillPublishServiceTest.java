@@ -22,6 +22,7 @@ import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
 import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.junit.jupiter.api.AfterEach;
@@ -1752,6 +1753,78 @@ class SkillPublishServiceTest {
                 "text/markdown");
         PackageEntry readme = new PackageEntry("README.md", "content".getBytes(StandardCharsets.UTF_8), 7, "text/markdown");
         return List.of(skillMd, readme);
+    }
+
+    @Test
+    void testPublishFromEntries_concurrentSkillInsertReturnsBusinessConflict() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        // No other owner's skill blocks the name, and this owner has none yet either.
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of());
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId)))
+                .thenReturn(Optional.empty());
+        // A concurrent publish inserts the same (namespace, slug, owner) coordinate first and wins the race.
+        when(skillRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () -> service.publishFromEntries(
+                namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+
+        assertEquals("error.skill.publish.concurrentConflict", exception.messageCode());
+        assertEquals("test-skill", String.valueOf(exception.messageArgs()[0]));
+        verify(skillVersionRepository, never()).save(any(SkillVersion.class));
+    }
+
+    @Test
+    void testPublishFromEntries_concurrentVersionInsertReturnsBusinessConflict() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        Skill skill = new Skill(1L, "test-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId)))
+                .thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("1.0.0"))).thenReturn(Optional.empty());
+        // A concurrent publish inserts the same (skillId, version) coordinate first and wins the race.
+        when(skillVersionRepository.save(any(SkillVersion.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () -> service.publishFromEntries(
+                namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+
+        assertEquals("error.skill.publish.concurrentConflict", exception.messageCode());
+        // Nothing should be uploaded to object storage once the coordinate race is lost.
+        verify(objectStorageService, never()).putObject(anyString(), any(), anyLong(), anyString());
     }
 
     private void setId(Object entity, Long id) throws Exception {
