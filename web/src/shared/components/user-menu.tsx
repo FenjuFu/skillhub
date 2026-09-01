@@ -130,7 +130,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             className="w-8 h-8 rounded-full border border-border/60"
           />
         )}
-        <span className="text-sm font-medium text-inherit">
+        <span className="hidden text-sm font-medium text-inherit lg:inline">
           {user.displayName}
         </span>
       </button>

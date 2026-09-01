@@ -37,7 +37,7 @@ export function NotificationDropdown({ onClose }: Props) {
 
   return (
     <div
-      className="absolute right-0 top-10 z-50 w-80 rounded-xl border bg-white shadow-lg"
+      className="absolute right-0 top-10 z-50 w-80 rounded-xl border bg-popover text-popover-foreground shadow-lg"
       style={{ borderColor: 'hsl(var(--border))' }}
     >
       {/* Header */}

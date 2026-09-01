@@ -110,7 +110,7 @@ export function LandingPage() {
         {/* Search box */}
         <div className="w-full max-w-2xl mb-8">
           <div
-            className="flex items-center bg-white rounded-xl border shadow-sm px-5 py-3.5"
+            className="flex items-center rounded-xl border bg-card px-5 py-3.5 text-card-foreground shadow-sm"
             style={{ borderColor: 'hsl(var(--border))' }}
           >
             <SearchIcon className="w-5 h-5 flex-shrink-0 mr-3" style={{ color: 'hsl(var(--text-placeholder))' }} strokeWidth={1.5} />
@@ -181,7 +181,7 @@ export function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="bg-white rounded-xl p-8 border shadow-sm transition-shadow hover:shadow-md"
+                className="rounded-xl border bg-card p-8 text-card-foreground shadow-sm transition-shadow hover:shadow-md"
                 style={{ borderColor: 'hsl(var(--border-card))' }}
               >
                 <div className="feature-icon w-12 h-12 rounded-2xl flex items-center justify-center mb-6 mx-auto bg-brand-gradient">

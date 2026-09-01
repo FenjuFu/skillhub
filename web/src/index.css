@@ -74,6 +74,10 @@
     --surface-glass: 222 35% 11%;
     --glow-primary: 239 100% 75%;
     --glow-accent: 271 100% 72%;
+    --text-secondary: 215 20% 72%;
+    --text-muted: 215 16% 63%;
+    --text-placeholder: 215 14% 48%;
+    --border-card: 222 20% 18%;
   }
 }
 
@@ -323,9 +327,9 @@
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 500;
-  color: #0369a1;
-  background: #e0f2fe;
-  border: 1px solid #7dd3fc;
+  color: hsl(199 76% 34%);
+  background: hsl(199 89% 94%);
+  border: 1px solid hsl(199 93% 74%);
   border-radius: 9999px;
 }
 
@@ -342,7 +346,7 @@
 }
 
 .status-pill--published { background: #16a34a; }
-.status-pill--review { background: #ea580c; }
+.status-pill--review { background: #c2410c; }
 .status-pill--archived { background: #6b7280; }
 .status-pill--rejected { background: #dc2626; }
 
@@ -378,10 +382,26 @@
   color: #1d4ed8;
 }
 
+.dark .handle-tag {
+  color: hsl(196 80% 72%);
+  background: hsl(199 70% 15%);
+  border-color: hsl(199 60% 30%);
+}
+
+.dark .badge-soft-green {
+  background: hsl(142 55% 16%);
+  color: hsl(142 70% 72%);
+}
+
+.dark .badge-soft-blue {
+  background: hsl(221 55% 18%);
+  color: hsl(213 90% 75%);
+}
+
 /* ─── Tab active ─── */
 .tab-active {
-  border-bottom: 2px solid #3b82f6;
-  color: #1d4ed8;
+  border-bottom: 2px solid hsl(var(--primary));
+  color: hsl(var(--primary));
 }
 
 /* ─── Code block ─── */

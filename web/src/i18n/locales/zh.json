@@ -487,6 +487,10 @@
     "pageTitle": "Token 管理",
     "pageSubtitle": "管理 CLI 和 API 使用的访问凭证"
   },
+  "theme": {
+    "switchToLight": "切换到浅色主题",
+    "switchToDark": "切换到深色主题"
+  },
   "reviews": {
     "title": "审核中心",
     "subtitle": "管理平台审核事务",

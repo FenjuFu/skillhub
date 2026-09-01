@@ -487,6 +487,10 @@
     "pageTitle": "Token Management",
     "pageSubtitle": "Manage access credentials for CLI and API"
   },
+  "theme": {
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
   "reviews": {
     "title": "Review Center",
     "subtitle": "Manage platform review tasks",
