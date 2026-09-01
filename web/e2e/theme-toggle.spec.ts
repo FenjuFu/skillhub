@@ -51,6 +51,22 @@ test.describe('Light and dark theme', () => {
         }),
       })
     })
+    await page.route('**/api/web/notifications/sse', async (route) => {
+      await route.fulfill({ status: 204 })
+    })
+    await page.route('**/api/web/me/stars?*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0,
+          msg: 'success',
+          data: { items: [], total: 0, page: 0, size: 100 },
+          timestamp: '2026-09-01T00:00:00Z',
+          requestId: 'theme-stars-fixture',
+        }),
+      })
+    })
     await page.addInitScript(() => {
       const observedWindow = window as Window & { __themeAtFirstReactContent?: boolean }
       const observer = new MutationObserver(() => {
@@ -90,6 +106,7 @@ test.describe('Light and dark theme', () => {
               eventType: 'REVIEW_SUBMITTED',
               title: 'Theme notification fixture',
               bodyJson: JSON.stringify({ skillName: 'Theme preview', version: '1.0.0' }),
+              targetRoute: '/search',
               status: 'UNREAD',
               createdAt: '2026-09-01T00:00:00Z',
             }],
@@ -155,6 +172,8 @@ test.describe('Light and dark theme', () => {
     await page.getByRole('link', { name: 'Search', exact: true }).first().click()
     await expect(page).toHaveURL(/\/search(?:\?|$)/)
     await expect(page.locator('html')).toHaveClass(/dark/)
+    await expect(page.getByPlaceholder('Search skills...')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('dark-desktop.png'), fullPage: true })
 
     const notificationButton = page.getByRole('button', { name: 'Notifications' })

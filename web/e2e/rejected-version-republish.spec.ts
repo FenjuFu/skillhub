@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
-import { loginWithCredentials, registerSession } from './helpers/session'
+import { createFreshSession, loginWithCredentials } from './helpers/session'
 import { E2eTestDataBuilder } from './helpers/test-data-builder'
 
 function getOptionalEnv(name: string): string | undefined {
@@ -26,7 +26,7 @@ test.describe('Rejected version replacement (Real API)', () => {
 
   test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
-    await registerSession(page, testInfo)
+    await createFreshSession(page, testInfo)
   })
 
   test('re-publishes the same version after rejection', async ({ page, browser }, testInfo) => {
@@ -71,6 +71,23 @@ test.describe('Rejected version replacement (Real API)', () => {
         'PENDING_REVIEW',
       )
       await adminBuilder.rejectReview(rejectedReviewId)
+      await publisherBuilder.waitForVersionStatus(
+        namespace.slug,
+        firstPublish.slug,
+        firstPublish.version,
+        'REJECTED',
+      )
+
+      await page.goto('/dashboard/review-progress')
+      await expect(page.getByRole('heading', { name: 'My Review Progress' })).toBeVisible()
+      const rejectedCard = page.locator('article').filter({ hasText: firstPublish.slug })
+      await expect(rejectedCard).toContainText('Rejected')
+      await expect(rejectedCard).toContainText('1 submission')
+      await rejectedCard.getByRole('button', { name: 'Submission history' }).click()
+      await expect(rejectedCard).toContainText('Rejected by Playwright E2E')
+      await rejectedCard.getByRole('link', { name: 'Edit and resubmit' }).click()
+      await expect(page).toHaveURL(/\/dashboard\/publish/)
+      await expect(page.getByText(new RegExp(`Resubmit .* v${firstPublish.version}`))).toBeVisible()
 
       const replacement = await publisherBuilder.publishSkill(namespace.slug, {
         name: skillName,
@@ -193,6 +210,7 @@ test.describe('Rejected version replacement (Real API)', () => {
       await expect(progressCard).toContainText('Attempt 1')
       await expect(progressCard).toContainText('Rejected by Playwright E2E')
       await expect(progressCard).toContainText('Reviewed by')
+      await expect(progressCard.getByRole('link', { name: 'Edit and resubmit' })).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath('author-review-progress-desktop.png'), fullPage: true })
 
       await page.setViewportSize({ width: 390, height: 844 })
@@ -204,10 +222,6 @@ test.describe('Rejected version replacement (Real API)', () => {
       await expect(adminPage.getByRole('heading', { name: 'Submission History' })).toBeVisible()
       await expect(adminPage.getByText('Attempt 2')).toBeVisible()
       await expect(adminPage.getByText('Attempt 1')).toBeVisible()
-
-      await progressCard.getByRole('link', { name: 'Edit and resubmit' }).click()
-      await expect(page).toHaveURL(/\/dashboard\/publish/)
-      await expect(page.getByText(new RegExp(`Resubmit .* v${replacement.version}`))).toBeVisible()
       expect(withoutKnownMetaCspWarning(consoleErrors)).toEqual([])
       expect(pageErrors).toEqual([])
       expect(withoutKnownMetaCspWarning(adminConsoleErrors)).toEqual([])
