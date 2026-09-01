@@ -34,6 +34,16 @@ test.describe('Light and dark theme', () => {
     await expect(page.getByRole('heading', { name: 'SkillHub', exact: true })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('dark-desktop.png'), fullPage: true })
 
+    const notificationButton = page.getByRole('button', { name: 'Notifications' })
+    await notificationButton.click()
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible()
+    const firstNotification = notificationButton.locator('..').locator('a').first()
+    if (await firstNotification.count()) {
+      await firstNotification.hover()
+    }
+    await page.screenshot({ path: testInfo.outputPath('dark-notifications.png'), fullPage: true })
+    await notificationButton.click()
+
     await page.setViewportSize({ width: 390, height: 844 })
     await expect(page.getByRole('button', { name: 'Switch to light theme' })).toBeVisible()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

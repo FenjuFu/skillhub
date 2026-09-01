@@ -75,7 +75,7 @@ export function NotificationDropdown({ onClose }: Props) {
               <Link
                 to={resolveNotificationTarget(item)}
                 onClick={() => handleItemClick(item)}
-                className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted"
               >
                 {/* Unread dot */}
                 <span className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ${item.status === 'UNREAD' ? 'bg-red-500' : 'bg-transparent'}`} />
