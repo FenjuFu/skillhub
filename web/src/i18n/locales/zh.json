@@ -1013,6 +1013,11 @@
       "button": "分享",
       "copied": "已复制",
       "defaultDescription": "实用技能"
+    },
+    "installForAgent": {
+      "button": "为 Agent 安装",
+      "copied": "安装指令已复制",
+      "prompt": "请根据 [SkillHub 技能安装指南]({{guideUrl}})，安装并使用 {{skill}}。"
     }
   },
   "skillCompare": {

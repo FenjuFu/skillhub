@@ -1013,6 +1013,11 @@
       "button": "Share",
       "copied": "Copied",
       "defaultDescription": "A useful skill"
+    },
+    "installForAgent": {
+      "button": "Install for Agent",
+      "copied": "Agent prompt copied",
+      "prompt": "Please follow the [SkillHub skill installation guide]({{guideUrl}}) to install and use {{skill}}."
     }
   },
   "skillCompare": {
