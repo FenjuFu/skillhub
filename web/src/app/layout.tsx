@@ -3,6 +3,7 @@ import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
+import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { UserMenu } from '@/shared/components/user-menu'
 import { NotificationBell } from '@/features/notification/notification-bell'
 import { dismissOpenOverlays } from '@/shared/lib/dismiss-open-overlays'
@@ -82,7 +83,7 @@ export function Layout() {
         <div
           className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90"
           style={{
-            background: 'radial-gradient(ellipse at 70% 20%, rgba(184,94,255,0.25) 0%, rgba(106,109,255,0.15) 40%, transparent 70%)',
+            background: 'radial-gradient(ellipse at 70% 20%, hsl(var(--glow-accent) / 0.12) 0%, hsl(var(--glow-primary) / 0.07) 40%, transparent 70%)',
             filter: 'blur(60px)',
           }}
         />
@@ -115,7 +116,8 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="flex items-center gap-6 text-[15px] font-normal" style={{ color: 'hsl(var(--text-secondary))' }}>
+        <div className="flex items-center gap-2 text-[15px] font-normal sm:gap-3" style={{ color: 'hsl(var(--text-secondary))' }}>
+          <ThemeToggle />
           <LanguageSwitcher />
           {user && <NotificationBell />}
           {isLoading ? null : user ? (
@@ -149,7 +151,7 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t rounded-t-2xl mt-auto" style={{ background: '#F1F5F9', borderColor: 'hsl(var(--border))' }}>
+      <footer className="relative z-10 mt-auto rounded-t-2xl border-t bg-secondary/70" style={{ borderColor: 'hsl(var(--border))' }}>
         <div className="max-w-6xl mx-auto px-6 md:px-12 py-10">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10 md:gap-12">
             <div className="flex-shrink-0">

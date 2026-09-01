@@ -87,6 +87,32 @@ class JpaGovernanceQueryRepositoryTest {
     }
 
     @Test
+    void getReviewTaskResponses_usesSnapshotAfterReviewedVersionIsReplaced() {
+        ReviewTask task = new ReviewTask(null, 201L, 11L, "1.2.0", "submitter");
+        setField(task, "id", 6L);
+        setField(task, "status", ReviewTaskStatus.REJECTED);
+
+        Skill skill = new Skill(11L, "skill-a", "submitter", SkillVisibility.PUBLIC);
+        setField(skill, "id", 201L);
+        Namespace namespace = new Namespace("team-a", "Team A", "submitter");
+        setField(namespace, "id", 11L);
+        UserAccount submitter = new UserAccount("submitter", "Submitter", "submitter@example.com", null);
+
+        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of(skill));
+        given(namespaceRepository.findByIdIn(List.of(11L))).willReturn(List.of(namespace));
+        given(userAccountRepository.findByIdIn(List.of("submitter"))).willReturn(List.of(submitter));
+
+        var responses = repository.getReviewTaskResponses(List.of(task));
+
+        assertThat(responses).singleElement().satisfies(response -> {
+            assertThat(response.skillVersionId()).isNull();
+            assertThat(response.namespace()).isEqualTo("team-a");
+            assertThat(response.skillSlug()).isEqualTo("skill-a");
+            assertThat(response.version()).isEqualTo("1.2.0");
+        });
+    }
+
+    @Test
     void getPromotionResponses_assemblesPromotionReadModel() {
         PromotionRequest request = new PromotionRequest(201L, 101L, 12L, "submitter");
         setField(request, "id", 2L);

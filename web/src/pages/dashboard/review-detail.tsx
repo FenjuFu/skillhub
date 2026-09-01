@@ -19,13 +19,20 @@ import { toast } from '@/shared/lib/toast'
 import { cn } from '@/shared/lib/utils'
 import { resolveReviewActionErrorDescription } from '@/features/review/review-error'
 import { ReviewSkillDetailSection } from '@/features/review/review-skill-detail-section'
+import { ReviewAttemptTimeline } from '@/features/review/review-attempt-timeline'
 import { SecurityAuditSection } from '@/features/security-audit/security-audit-section'
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { useReviewFile } from '@/features/review/use-review-file'
 import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
-import { useReviewDetail, useReviewSkillDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
+import {
+  useReviewAttempts,
+  useReviewDetail,
+  useReviewSkillDetail,
+  useApproveReview,
+  useRejectReview,
+} from '@/features/review/use-review-detail'
 
 /**
  * Review task detail page for moderators. The route owns the approve/reject
@@ -46,6 +53,11 @@ function ReviewDetailScreen({
   const { user } = useAuth()
 
   const { data: review, isLoading } = useReviewDetail(taskId)
+  const {
+    data: reviewAttempts,
+    isLoading: isLoadingReviewAttempts,
+    isError: isReviewAttemptsError,
+  } = useReviewAttempts(taskId)
   const {
     data: reviewSkillDetail,
     isLoading: isLoadingReviewSkillDetail,
@@ -250,6 +262,17 @@ function ReviewDetailScreen({
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewComment')}</Label>
             <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.reviewComment}</p>
           </div>
+        )}
+      </Card>
+
+      <Card className="space-y-4 p-6 md:p-8">
+        <h2 className="text-xl font-bold font-heading">{t('review.attemptHistory')}</h2>
+        {isLoadingReviewAttempts ? (
+          <div className="h-20 animate-shimmer rounded-lg" />
+        ) : isReviewAttemptsError ? (
+          <p className="text-sm text-destructive">{t('review.attemptHistoryError')}</p>
+        ) : (
+          <ReviewAttemptTimeline attempts={reviewAttempts ?? []} locale={i18n.language} />
         )}
       </Card>
 

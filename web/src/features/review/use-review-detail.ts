@@ -47,6 +47,14 @@ export function useReviewSkillDetail(taskId: number) {
   })
 }
 
+export function useReviewAttempts(taskId: number) {
+  return useQuery({
+    queryKey: ['reviews', taskId, 'attempts'],
+    queryFn: () => reviewApi.listAttempts(taskId),
+    enabled: !!taskId,
+  })
+}
+
 /**
  * Approves a review and refreshes both the review queue and the governance
  * dashboard, which reads aggregate review state from separate endpoints.

@@ -487,6 +487,38 @@
     "pageTitle": "Token Management",
     "pageSubtitle": "Manage access credentials for CLI and API"
   },
+  "theme": {
+    "darkMode": "Dark theme",
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
+  "reviewProgress": {
+    "title": "My Review Progress",
+    "subtitle": "Track the current decision, reviewer feedback, and every resubmission of your skills",
+    "searchLabel": "Search skills or namespaces",
+    "searchPlaceholder": "Search skill or namespace",
+    "searchAction": "Search",
+    "statusFilter": "Filter by review status",
+    "statusAll": "All statuses",
+    "statusPending": "In review",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "statusSummary": "Current review status summary",
+    "latestSubmitted": "Latest submission: {{time}}",
+    "latestReviewed": "Latest decision: {{time}}",
+    "attemptCount": "{{count}} submissions",
+    "attemptNumber": "Attempt {{number}}",
+    "submittedAt": "Submitted {{time}}",
+    "reviewedAt": "Reviewed {{time}}",
+    "reviewedBy": "Reviewed by {{reviewer}}",
+    "history": "Submission history",
+    "resubmit": "Edit and resubmit",
+    "loading": "Loading review progress",
+    "error": "Review progress could not be loaded. Try again later.",
+    "historyError": "Submission history could not be loaded. Try again later.",
+    "emptyTitle": "No review history yet",
+    "emptyDescription": "Reviews for public or team skills will appear here after submission."
+  },
   "reviews": {
     "title": "Review Center",
     "subtitle": "Manage platform review tasks",
@@ -1328,6 +1360,7 @@
       "governance": "Governance Center",
       "stars": "Starred",
       "subscriptions": "My Subscriptions",
+      "reviewProgress": "My Review Progress",
       "reviews": "Review Management",
       "promotions": "Promotion Management",
       "reports": "Report Management",
@@ -1357,6 +1390,10 @@
     "reviewNotice": {
       "title": "Review Notice",
       "description": "Submitted skill packages require admin review before publication."
+    },
+    "resubmitNotice": {
+      "title": "Resubmit {{skill}} v{{version}}",
+      "description": "Upload a corrected package that keeps the same skill name and version. It will enter the normal review flow again."
     },
     "namespace": "Namespace",
     "selectNamespace": "Select namespace",
@@ -1420,6 +1457,8 @@
     "reviewer": "Reviewed By",
     "reviewTime": "Reviewed At",
     "reviewComment": "Review Comment",
+    "attemptHistory": "Submission History",
+    "attemptHistoryError": "Submission history could not be loaded. Try again later.",
     "actions": "Review Actions",
     "commentLabel": "Comment (optional)",
     "commentPlaceholder": "Enter review comment...",

@@ -487,6 +487,38 @@
     "pageTitle": "Token 管理",
     "pageSubtitle": "管理 CLI 和 API 使用的访问凭证"
   },
+  "theme": {
+    "darkMode": "深色主题",
+    "switchToLight": "切换到浅色主题",
+    "switchToDark": "切换到深色主题"
+  },
+  "reviewProgress": {
+    "title": "我的审核进度",
+    "subtitle": "查看技能提交的当前状态、审核意见和每次重提记录",
+    "searchLabel": "搜索技能或命名空间",
+    "searchPlaceholder": "搜索 Skill 或命名空间",
+    "searchAction": "搜索",
+    "statusFilter": "按审核状态筛选",
+    "statusAll": "全部状态",
+    "statusPending": "审核中",
+    "statusApproved": "已通过",
+    "statusRejected": "已拒绝",
+    "statusSummary": "当前审核状态汇总",
+    "latestSubmitted": "最近提交：{{time}}",
+    "latestReviewed": "最近审核：{{time}}",
+    "attemptCount": "共 {{count}} 次提交",
+    "attemptNumber": "第 {{number}} 次",
+    "submittedAt": "提交于 {{time}}",
+    "reviewedAt": "审核于 {{time}}",
+    "reviewedBy": "审核人：{{reviewer}}",
+    "history": "提交历史",
+    "resubmit": "修改并重提",
+    "loading": "正在加载审核进度",
+    "error": "审核进度加载失败，请稍后重试。",
+    "historyError": "提交历史加载失败，请稍后重试。",
+    "emptyTitle": "还没有审核记录",
+    "emptyDescription": "提交公开或团队 Skill 后，审核进度会显示在这里。"
+  },
   "reviews": {
     "title": "审核中心",
     "subtitle": "管理平台审核事务",
@@ -1328,6 +1360,7 @@
       "governance": "治理中心",
       "stars": "我的收藏",
       "subscriptions": "我的订阅",
+      "reviewProgress": "我的审核进度",
       "reviews": "审核管理",
       "promotions": "推广管理",
       "reports": "举报管理",
@@ -1357,6 +1390,10 @@
     "reviewNotice": {
       "title": "发布审核说明",
       "description": "技能包提交后需要经过管理员审核才能正式发布。"
+    },
+    "resubmitNotice": {
+      "title": "重新提交 {{skill}} v{{version}}",
+      "description": "上传修正后的技能包，并保持相同的技能名称和版本；提交后会重新进入正常审核流程。"
     },
     "namespace": "命名空间",
     "selectNamespace": "选择命名空间",
@@ -1420,6 +1457,8 @@
     "reviewer": "审核者",
     "reviewTime": "审核时间",
     "reviewComment": "审核意见",
+    "attemptHistory": "提交历史",
+    "attemptHistoryError": "提交历史加载失败，请稍后重试。",
     "actions": "审核操作",
     "commentLabel": "审核意见（可选）",
     "commentPlaceholder": "填写审核意见...",

@@ -827,12 +827,12 @@ export function SkillDetailPage() {
               </span>
             )}
             {isReviewFlowPending && (
-              <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
+              <span className="badge-soft bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
                 {t('skillDetail.versionStatusPendingReview')}
               </span>
             )}
             {!isPendingPreview && (isRejectedPreview || hasRejectedOwnerPreview) && skill.canManageLifecycle && (
-              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+              <span className="badge-soft bg-red-100 text-red-900 dark:bg-red-950/60 dark:text-red-300">
                 {t('skillDetail.rejectedBadge')}
               </span>
             )}
@@ -861,8 +861,8 @@ export function SkillDetailPage() {
                   className={cn(
                     'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
                     label.type === 'PRIVILEGED'
-                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80'
-                      : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200/80',
+                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-900/70'
+                      : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
                   )}
                 >
                   {label.displayName}

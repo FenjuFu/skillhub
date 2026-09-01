@@ -11,8 +11,14 @@ public class ReviewTask {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "skill_version_id", nullable = false)
+    @Column(name = "skill_version_id")
     private Long skillVersionId;
+
+    @Column(name = "skill_id", nullable = false)
+    private Long skillId;
+
+    @Column(name = "skill_version", nullable = false, length = 64)
+    private String skillVersion;
 
     @Column(name = "namespace_id", nullable = false)
     private Long namespaceId;
@@ -49,9 +55,22 @@ public class ReviewTask {
         this.submittedBy = submittedBy;
     }
 
+    public ReviewTask(Long skillVersionId, Long skillId, Long namespaceId,
+                      String skillVersion, String submittedBy) {
+        this.skillVersionId = skillVersionId;
+        this.skillId = skillId;
+        this.namespaceId = namespaceId;
+        this.skillVersion = skillVersion;
+        this.submittedBy = submittedBy;
+    }
+
     public Long getId() { return id; }
 
     public Long getSkillVersionId() { return skillVersionId; }
+
+    public Long getSkillId() { return skillId; }
+
+    public String getSkillVersion() { return skillVersion; }
 
     public Long getNamespaceId() { return namespaceId; }
 

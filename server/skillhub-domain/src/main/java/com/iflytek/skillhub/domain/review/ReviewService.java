@@ -111,7 +111,8 @@ public class ReviewService {
         skillVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
         skillVersionRepository.save(skillVersion);
 
-        ReviewTask task = new ReviewTask(skillVersionId, skill.getNamespaceId(), userId);
+        ReviewTask task = new ReviewTask(
+                skillVersionId, skill.getId(), skill.getNamespaceId(), skillVersion.getVersion(), userId);
         try {
             ReviewTask saved = reviewTaskRepository.save(task);
             eventPublisher.publishEvent(new ReviewSubmittedEvent(
@@ -153,7 +154,8 @@ public class ReviewService {
         skillVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
         skillVersionRepository.save(skillVersion);
 
-        ReviewTask task = new ReviewTask(skillVersionId, skill.getNamespaceId(), userId);
+        ReviewTask task = new ReviewTask(
+                skillVersionId, skill.getId(), skill.getNamespaceId(), skillVersion.getVersion(), userId);
         try {
             ReviewTask saved = reviewTaskRepository.save(task);
             eventPublisher.publishEvent(new ReviewSubmittedEvent(

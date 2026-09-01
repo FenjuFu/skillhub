@@ -158,6 +158,20 @@ export function PublishPage() {
     <div className="max-w-2xl mx-auto space-y-8 animate-fade-up">
       <DashboardPageHeader title={t('publish.title')} subtitle={t('publish.subtitle')} />
 
+      {prefill.resubmitSkill && prefill.resubmitVersion ? (
+        <Card className="border-amber-500/25 bg-amber-500/5 p-4">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t('publish.resubmitNotice.title', {
+              skill: `@${prefill.namespace}/${prefill.resubmitSkill}`,
+              version: prefill.resubmitVersion,
+            })}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('publish.resubmitNotice.description')}
+          </p>
+        </Card>
+      ) : null}
+
       <Card className="p-4 bg-blue-500/5 border-blue-500/20">
         <div className="flex items-start gap-3">
           <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
