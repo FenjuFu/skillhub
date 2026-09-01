@@ -15,6 +15,12 @@ function adminCredentials() {
   }
 }
 
+function withoutKnownMetaCspWarning(messages: string[]): string[] {
+  return messages.filter((message) => (
+    !message.includes("frame-ancestors' is ignored when delivered via a <meta> element")
+  ))
+}
+
 test.describe('Rejected version replacement (Real API)', () => {
   test.describe.configure({ timeout: 150_000 })
 
@@ -142,12 +148,9 @@ test.describe('Rejected version replacement (Real API)', () => {
       await progressCard.getByRole('link', { name: 'Edit and resubmit' }).click()
       await expect(page).toHaveURL(/\/dashboard\/publish/)
       await expect(page.getByText(new RegExp(`Resubmit .* v${replacement.version}`))).toBeVisible()
-      const unexpectedConsoleErrors = consoleErrors.filter((message) => (
-        !message.includes("frame-ancestors' is ignored when delivered via a <meta> element")
-      ))
-      expect(unexpectedConsoleErrors).toEqual([])
+      expect(withoutKnownMetaCspWarning(consoleErrors)).toEqual([])
       expect(pageErrors).toEqual([])
-      expect(adminConsoleErrors).toEqual([])
+      expect(withoutKnownMetaCspWarning(adminConsoleErrors)).toEqual([])
       expect(adminPageErrors).toEqual([])
     } finally {
       await adminBuilder.cleanup()
