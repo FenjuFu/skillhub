@@ -116,7 +116,7 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3 text-[15px] font-normal sm:gap-4" style={{ color: 'hsl(var(--text-secondary))' }}>
+        <div className="flex items-center gap-2 text-[15px] font-normal sm:gap-3" style={{ color: 'hsl(var(--text-secondary))' }}>
           <ThemeToggle />
           <LanguageSwitcher />
           {user && <NotificationBell />}

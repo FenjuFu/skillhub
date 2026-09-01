@@ -22,12 +22,12 @@ describe('ThemeToggle', () => {
   it('switches theme and keeps the selection in browser-local storage', () => {
     render(<ThemeToggle />)
 
-    const toggle = screen.getByRole('button', { name: 'theme.switchToDark' })
-    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+    const toggle = screen.getByRole('switch', { name: 'theme.darkMode' })
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
 
     fireEvent.click(toggle)
 
-    expect(screen.getByRole('button', { name: 'theme.switchToLight' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('switch', { name: 'theme.darkMode' }).getAttribute('aria-checked')).toBe('true')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark')
   })

@@ -488,6 +488,7 @@
     "pageSubtitle": "Manage access credentials for CLI and API"
   },
   "theme": {
+    "darkMode": "Dark theme",
     "switchToLight": "Switch to light theme",
     "switchToDark": "Switch to dark theme"
   },

@@ -5,6 +5,52 @@ test.describe('Light and dark theme', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
     await page.context().setExtraHTTPHeaders({ 'X-Mock-User-Id': 'local-user' })
+    await page.route('**/api/v1/auth/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0,
+          msg: 'success',
+          data: {
+            userId: 'theme-layout-user',
+            displayName: 'Theme Layout User',
+            avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+            platformRoles: [],
+            oauthProvider: 'local',
+            canChangePassword: true,
+          },
+          timestamp: '2026-09-01T00:00:00Z',
+          requestId: 'theme-auth-fixture',
+        }),
+      })
+    })
+    await page.route('**/api/web/me/namespaces', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0,
+          msg: 'success',
+          data: [],
+          timestamp: '2026-09-01T00:00:00Z',
+          requestId: 'theme-namespace-fixture',
+        }),
+      })
+    })
+    await page.route('**/api/web/notifications/unread-count', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0,
+          msg: 'success',
+          data: { count: 1 },
+          timestamp: '2026-09-01T00:00:00Z',
+          requestId: 'theme-unread-fixture',
+        }),
+      })
+    })
     await page.addInitScript(() => {
       const observedWindow = window as Window & { __themeAtFirstReactContent?: boolean }
       const observer = new MutationObserver(() => {
@@ -62,15 +108,45 @@ test.describe('Light and dark theme', () => {
     const header = page.locator('header')
     const lightHeaderBackground = await header.evaluate((element) => getComputedStyle(element).backgroundColor)
 
-    await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+    const themeSwitch = page.getByRole('switch', { name: 'Dark theme' })
+    await expect(themeSwitch).toHaveAttribute('aria-checked', 'false')
+    await themeSwitch.click()
     await expect(page.locator('html')).toHaveClass(/dark/)
+    await expect(themeSwitch).toHaveAttribute('aria-checked', 'true')
     await expect.poll(() => header.evaluate((element) => getComputedStyle(element).backgroundColor))
       .not.toBe(lightHeaderBackground)
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem('skillhub-theme'))).toBe('dark')
+    const destructiveContrast = await page.evaluate(() => {
+      const probe = document.createElement('button')
+      probe.className = 'bg-destructive text-destructive-foreground'
+      probe.textContent = 'Destructive contrast probe'
+      document.body.append(probe)
+      const styles = getComputedStyle(probe)
+
+      const luminance = (color: string) => {
+        const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number)
+        if (!channels || channels.length !== 3) {
+          throw new Error(`Unable to parse computed color: ${color}`)
+        }
+        const linear = channels.map((channel) => {
+          const normalized = channel / 255
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4
+        })
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+      }
+
+      const background = luminance(styles.backgroundColor)
+      const foreground = luminance(styles.color)
+      probe.remove()
+      return (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05)
+    })
+    expect(destructiveContrast).toBeGreaterThanOrEqual(4.5)
 
     await page.reload()
     await expect(page.locator('html')).toHaveClass(/dark/)
-    await expect(page.getByRole('button', { name: 'Switch to light theme' })).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Dark theme' })).toHaveAttribute('aria-checked', 'true')
     await expect(page.getByRole('heading', { name: 'SkillHub', exact: true })).toBeVisible()
     await expect.poll(() => page.evaluate(() => (
       window as Window & { __themeAtFirstReactContent?: boolean }
@@ -94,9 +170,20 @@ test.describe('Light and dark theme', () => {
     await notificationButton.click()
 
     await page.setViewportSize({ width: 390, height: 844 })
-    await expect(page.getByRole('button', { name: 'Switch to light theme' })).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Dark theme' })).toBeVisible()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('dark-mobile.png'), fullPage: true })
+
+    await page.setViewportSize({ width: 320, height: 568 })
+    const headerControls = page.locator('header > div')
+    const [headerBox, controlsBox] = await Promise.all([header.boundingBox(), headerControls.boundingBox()])
+    expect(headerBox).not.toBeNull()
+    expect(controlsBox).not.toBeNull()
+    expect((controlsBox?.x ?? 0) + (controlsBox?.width ?? 0)).toBeLessThanOrEqual(
+      (headerBox?.x ?? 0) + (headerBox?.width ?? 0),
+    )
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('dark-mobile-320.png'), fullPage: true })
 
     const unexpectedConsoleErrors = consoleErrors.filter((message) => (
       !message.includes("frame-ancestors' is ignored when delivered via a <meta> element")
