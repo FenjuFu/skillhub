@@ -10,15 +10,36 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.ActiveProfiles;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Import(JpaReviewProgressQueryRepository.class)
+@Testcontainers
 class JpaReviewProgressQueryRepositoryTest {
+
+    @Container
+    private static final PostgreSQLContainer<?> POSTGRES =
+            new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @DynamicPropertySource
+    static void configurePostgres(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+    }
 
     @Autowired
     private TestEntityManager entityManager;
@@ -77,6 +98,7 @@ class JpaReviewProgressQueryRepositoryTest {
 
         var firstPage = repository.findMyProgress("author-1", null, "", 0, 1);
 
+        assertThat(firstPage.items()).hasSize(1);
         assertThat(firstPage.total()).isEqualTo(3);
         assertThat(firstPage.items()).singleElement().satisfies(item -> {
             assertThat(item.skillSlug()).isEqualTo("alpha-skill");
