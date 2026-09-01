@@ -164,6 +164,9 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             <Link to="/dashboard/subscriptions" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.subscriptions')}
             </Link>
+            <Link to="/dashboard/review-progress" className={menuItemClassName} onClick={closeMenu}>
+              {t('user.menu.reviewProgress')}
+            </Link>
             {reviewCenterVisible ? (
               <Link to={buildGlobalReviewsPath()} className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.reviews')}

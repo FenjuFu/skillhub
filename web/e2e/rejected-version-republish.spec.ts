@@ -24,6 +24,13 @@ test.describe('Rejected version replacement (Real API)', () => {
   })
 
   test('re-publishes the same version after rejection', async ({ page, browser }, testInfo) => {
+    const consoleErrors: string[] = []
+    const pageErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
+    })
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+
     const publisherBuilder = new E2eTestDataBuilder(page, testInfo)
     await publisherBuilder.init()
 
@@ -74,8 +81,43 @@ test.describe('Rejected version replacement (Real API)', () => {
       expect(replacement.version).toBe(firstPublish.version)
       expect(replacementReviewId).not.toBe(rejectedReviewId)
 
+      const attemptsResponse = await page.request.get(
+        `/api/web/reviews/my-progress/${replacementReviewId}/attempts`,
+      )
+      expect(attemptsResponse.status()).toBe(200)
+      const attemptsBody = await attemptsResponse.json() as {
+        data: Array<{ id: number; status: string; skillVersionId: number | null }>
+      }
+      expect(attemptsBody.data.map((attempt) => attempt.id)).toEqual([
+        replacementReviewId,
+        rejectedReviewId,
+      ])
+      expect(attemptsBody.data.map((attempt) => attempt.status)).toEqual(['PENDING', 'REJECTED'])
+      expect(attemptsBody.data[1]?.skillVersionId).toBeNull()
+
       const replacedReviewResponse = await adminPage.request.get(`/api/web/reviews/${rejectedReviewId}`)
-      expect(replacedReviewResponse.status()).toBe(404)
+      expect(replacedReviewResponse.status()).toBe(200)
+
+      await page.goto('/dashboard/review-progress')
+      await expect(page.getByRole('heading', { name: 'My Review Progress' })).toBeVisible()
+      const progressCard = page.locator('article').filter({ hasText: replacement.slug })
+      await expect(progressCard).toContainText('In review')
+      await expect(progressCard).toContainText('2 submissions')
+      await progressCard.getByRole('button', { name: 'Submission history' }).click()
+      await expect(progressCard).toContainText('Attempt 2')
+      await expect(progressCard).toContainText('Attempt 1')
+      await expect(progressCard).toContainText('Rejected by Playwright E2E')
+      await page.screenshot({ path: testInfo.outputPath('author-review-progress-desktop.png'), fullPage: true })
+
+      await page.setViewportSize({ width: 390, height: 844 })
+      await expect(progressCard).toBeVisible()
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath('author-review-progress-mobile.png'), fullPage: true })
+      const unexpectedConsoleErrors = consoleErrors.filter((message) => (
+        !message.includes("frame-ancestors' is ignored when delivered via a <meta> element")
+      ))
+      expect(unexpectedConsoleErrors).toEqual([])
+      expect(pageErrors).toEqual([])
     } finally {
       await adminBuilder.cleanup()
       await adminContext.close()

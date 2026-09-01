@@ -103,6 +103,10 @@ const NamespaceReviewDetailPage = createLazyRouteComponent(
 )
 const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
 const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
+const ReviewProgressPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/review-progress'),
+  'ReviewProgressPage',
+)
 const ReportsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/reports'),
   'ReportsPage',
@@ -328,6 +332,24 @@ const dashboardReviewsRoute = createRoute({
   component: ReviewsPage,
 })
 
+const dashboardReviewProgressRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/review-progress',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): {
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+    q?: string
+    page?: number
+  } => ({
+    status: search.status === 'PENDING' || search.status === 'APPROVED' || search.status === 'REJECTED'
+      ? search.status
+      : undefined,
+    q: typeof search.q === 'string' && search.q.trim() ? search.q.trim() : undefined,
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
+  component: ReviewProgressPage,
+})
+
 const dashboardReportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reports',
@@ -478,6 +500,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespaceReviewDetailRoute,
   dashboardGovernanceRoute,
   dashboardReviewsRoute,
+  dashboardReviewProgressRoute,
   dashboardReportsRoute,
   dashboardReviewDetailRoute,
   dashboardPromotionsRoute,

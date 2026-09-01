@@ -612,12 +612,23 @@ class ScanTaskConsumerTest {
         }
 
         @Override
+        public List<ReviewTask> findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+                String submittedBy, Long skillId, String skillVersion) {
+            throw unsupported();
+        }
+
+        @Override
         public boolean existsByNamespaceId(Long namespaceId) {
             return false;
         }
 
         @Override
         public void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds) {
+            throw unsupported();
+        }
+
+        @Override
+        public void deleteBySkillId(Long skillId) {
             throw unsupported();
         }
 

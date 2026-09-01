@@ -16,11 +16,13 @@ import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
+import com.iflytek.skillhub.dto.ReviewProgressResponse;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
 import com.iflytek.skillhub.repository.GovernanceQueryRepository;
+import com.iflytek.skillhub.repository.ReviewProgressQueryRepository;
 import com.iflytek.skillhub.service.ReviewSkillDetailAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -78,6 +81,9 @@ class ReviewPortalControllerTest {
 
     @MockBean
     private GovernanceQueryRepository governanceQueryRepository;
+
+    @MockBean
+    private ReviewProgressQueryRepository reviewProgressQueryRepository;
 
     @MockBean
     private RbacService rbacService;
@@ -274,6 +280,54 @@ class ReviewPortalControllerTest {
                 .andExpect(jsonPath("$.code").value(403));
 
         verify(reviewTaskRepository, never()).findByStatus(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void listMyReviewProgress_isScopedToAuthenticatedAuthor() throws Exception {
+        var item = new ReviewProgressResponse(
+                12L,
+                30L,
+                "team-a",
+                "skill-a",
+                "1.0.0",
+                "REJECTED",
+                "Please add tests",
+                Instant.parse("2026-08-31T10:00:00Z"),
+                Instant.parse("2026-08-31T11:00:00Z"),
+                2L
+        );
+        given(reviewProgressQueryRepository.findMyProgress("author-1", null, "", 0, 20))
+                .willReturn(new com.iflytek.skillhub.dto.PageResponse<>(List.of(item), 1, 0, 20));
+
+        mockMvc.perform(get("/api/v1/reviews/my-progress").with(auth("author-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].skillSlug").value("skill-a"))
+                .andExpect(jsonPath("$.data.items[0].attemptCount").value(2))
+                .andExpect(jsonPath("$.data.items[0].latestStatus").value("REJECTED"));
+
+        verify(reviewProgressQueryRepository).findMyProgress("author-1", null, "", 0, 20);
+    }
+
+    @Test
+    void listMyReviewAttempts_returnsOnlyTheAuthorsVersionHistory() throws Exception {
+        ReviewTask latest = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.REJECTED);
+        setField(latest, "skillId", 30L);
+        setField(latest, "skillVersion", "1.0.0");
+        ReviewTask previous = createReviewTask(8L, 20L, "author-1", ReviewTaskStatus.REJECTED);
+        setField(previous, "skillId", 30L);
+        setField(previous, "skillVersion", "1.0.0");
+        given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
+        given(reviewTaskRepository.findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+                "author-1", 30L, "1.0.0"))
+                .willReturn(List.of(latest, previous));
+        given(governanceQueryRepository.getReviewTaskResponses(List.of(latest, previous)))
+                .willReturn(List.of(toReviewResponse(latest), toReviewResponse(previous)));
+
+        mockMvc.perform(get("/api/v1/reviews/my-progress/12/attempts").with(auth("author-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].id").value(12))
+                .andExpect(jsonPath("$.data[1].id").value(8));
     }
 
     @Test

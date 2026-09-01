@@ -13,9 +13,11 @@ import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.ReviewProgressResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.GovernanceQueryRepository;
+import com.iflytek.skillhub.repository.ReviewProgressQueryRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +36,7 @@ public class ReviewPortalAppService {
     private final ReviewTaskRepository reviewTaskRepository;
     private final NamespaceRepository namespaceRepository;
     private final GovernanceQueryRepository governanceQueryRepository;
+    private final ReviewProgressQueryRepository reviewProgressQueryRepository;
     private final RbacService rbacService;
     private final AuditLogService auditLogService;
     private final RequestIdAccessor requestIdAccessor;
@@ -42,6 +45,7 @@ public class ReviewPortalAppService {
                                   ReviewTaskRepository reviewTaskRepository,
                                   NamespaceRepository namespaceRepository,
                                   GovernanceQueryRepository governanceQueryRepository,
+                                  ReviewProgressQueryRepository reviewProgressQueryRepository,
                                   RbacService rbacService,
                                   AuditLogService auditLogService,
                                   RequestIdAccessor requestIdAccessor) {
@@ -49,6 +53,7 @@ public class ReviewPortalAppService {
         this.reviewTaskRepository = reviewTaskRepository;
         this.namespaceRepository = namespaceRepository;
         this.governanceQueryRepository = governanceQueryRepository;
+        this.reviewProgressQueryRepository = reviewProgressQueryRepository;
         this.rbacService = rbacService;
         this.auditLogService = auditLogService;
         this.requestIdAccessor = requestIdAccessor;
@@ -210,6 +215,39 @@ public class ReviewPortalAppService {
                 tasks.getPageable(),
                 tasks.getTotalElements()
         ));
+    }
+
+    public PageResponse<ReviewProgressResponse> listMyProgress(
+            String status,
+            String query,
+            int page,
+            int size,
+            String userId) {
+        ReviewTaskStatus reviewStatus = status == null || status.isBlank()
+                ? null
+                : ReviewTaskStatus.valueOf(status.toUpperCase(java.util.Locale.ROOT));
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return reviewProgressQueryRepository.findMyProgress(
+                userId,
+                reviewStatus,
+                query != null ? query : "",
+                safePage,
+                safeSize
+        );
+    }
+
+    public List<ReviewTaskResponse> listMyAttempts(Long reviewTaskId, String userId) {
+        ReviewTask anchor = reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+        if (!anchor.getSubmittedBy().equals(userId)) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
+
+        List<ReviewTask> attempts = reviewTaskRepository
+                .findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+                        userId, anchor.getSkillId(), anchor.getSkillVersion());
+        return governanceQueryRepository.getReviewTaskResponses(attempts);
     }
 
     public ReviewTaskResponse getReviewDetail(Long reviewTaskId,

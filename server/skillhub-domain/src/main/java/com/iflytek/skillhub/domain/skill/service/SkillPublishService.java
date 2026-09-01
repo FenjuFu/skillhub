@@ -561,7 +561,8 @@ public class SkillPublishService {
 
         // Create review task for PUBLIC/NAMESPACE_ONLY (not PRIVATE)
         if (!autoPublish && visibility != SkillVisibility.PRIVATE) {
-            ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
+            ReviewTask reviewTask = new ReviewTask(
+                    version.getId(), skill.getId(), namespace.getId(), version.getVersion(), publisherId);
             ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
             eventPublisher.publishEvent(new ReviewSubmittedEvent(
                     savedReviewTask.getId(),
@@ -608,10 +609,11 @@ public class SkillPublishService {
             skillRepository.flush();
         }
 
-        // Every review task referencing this version has to go, not just a PENDING one:
-        // a rejected version still owns a REJECTED task whose foreign key blocks the
-        // skill_version delete below, which surfaces to the caller as an HTTP 500.
-        reviewTaskRepository.deleteBySkillVersionIdIn(List.of(version.getId()));
+        // A replaceable version may still have one obsolete pending task, but settled attempts are
+        // durable governance history. The database detaches those settled attempts from the
+        // replaced version while retaining their skill/version snapshot.
+        reviewTaskRepository.findBySkillVersionIdAndStatus(version.getId(), ReviewTaskStatus.PENDING)
+                .ifPresent(reviewTaskRepository::delete);
 
         List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
         List<String> storageKeys = new ArrayList<>();

@@ -427,7 +427,7 @@ export interface SkillDeleteResult {
 
 export interface ReviewTask {
   id: number
-  skillVersionId: number
+  skillVersionId: number | null
   namespace: string
   skillSlug: string
   version: string
@@ -439,6 +439,19 @@ export interface ReviewTask {
   reviewComment?: string
   submittedAt: string
   reviewedAt?: string
+}
+
+export interface ReviewProgress {
+  latestReviewTaskId: number
+  skillId: number
+  namespace: string
+  skillSlug: string
+  skillVersion: string
+  latestStatus: 'PENDING' | 'APPROVED' | 'REJECTED'
+  latestReviewComment?: string
+  latestSubmittedAt: string
+  latestReviewedAt?: string
+  attemptCount: number
 }
 
 export interface ReviewSkillDetail {

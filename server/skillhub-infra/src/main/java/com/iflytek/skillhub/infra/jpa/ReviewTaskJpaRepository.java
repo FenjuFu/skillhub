@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,9 +29,14 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
 
     Page<ReviewTask> findBySubmittedByAndStatus(String submittedBy, ReviewTaskStatus status, Pageable pageable);
 
+    List<ReviewTask> findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+            String submittedBy, Long skillId, String skillVersion);
+
     boolean existsByNamespaceId(Long namespaceId);
 
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
+
+    void deleteBySkillId(Long skillId);
 
     @Modifying
     @Query("""

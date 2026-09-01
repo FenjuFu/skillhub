@@ -8,10 +8,12 @@ import com.iflytek.skillhub.dto.NamespaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.PromotionResponseDto;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
+import com.iflytek.skillhub.dto.ReviewProgressResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -91,6 +93,19 @@ public class GovernanceWorkflowAppService {
 
     public PageResponse<ReviewTaskResponse> listMyReviewSubmissions(int page, int size, String userId) {
         return reviewPortalAppService.listMySubmissions(page, size, userId);
+    }
+
+    public PageResponse<ReviewProgressResponse> listMyReviewProgress(
+            String status,
+            String query,
+            int page,
+            int size,
+            String userId) {
+        return reviewPortalAppService.listMyProgress(status, query, page, size, userId);
+    }
+
+    public List<ReviewTaskResponse> listMyReviewAttempts(Long reviewTaskId, String userId) {
+        return reviewPortalAppService.listMyAttempts(reviewTaskId, userId);
     }
 
     public ReviewTaskResponse getReviewDetail(Long reviewTaskId,

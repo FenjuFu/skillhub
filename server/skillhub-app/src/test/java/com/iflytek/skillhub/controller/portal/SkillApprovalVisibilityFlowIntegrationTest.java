@@ -212,7 +212,8 @@ class SkillApprovalVisibilityFlowIntegrationTest {
         version = skillVersionRepository.save(version);
         skillVersionRepository.flush();
 
-        ReviewTask reviewTask = reviewTaskJpaRepository.saveAndFlush(new ReviewTask(version.getId(), namespace.getId(), ownerId));
+        ReviewTask reviewTask = reviewTaskJpaRepository.saveAndFlush(new ReviewTask(
+                version.getId(), skill.getId(), namespace.getId(), version.getVersion(), ownerId));
 
         return new PendingSkillGraph(namespace, skill, version, reviewTask);
     }
@@ -237,7 +238,8 @@ class SkillApprovalVisibilityFlowIntegrationTest {
         version = skillVersionRepository.save(version);
         skillVersionRepository.flush();
 
-        ReviewTask reviewTask = reviewTaskJpaRepository.saveAndFlush(new ReviewTask(version.getId(), namespace.getId(), ownerId));
+        ReviewTask reviewTask = reviewTaskJpaRepository.saveAndFlush(new ReviewTask(
+                version.getId(), skill.getId(), namespace.getId(), version.getVersion(), ownerId));
 
         return new PendingSkillGraph(namespace, skill, version, reviewTask);
     }

@@ -15,6 +15,7 @@ import type {
   MergeInitiateResponse,
   MergeVerifyRequest,
   ReviewSkillDetail,
+  ReviewProgress,
   ReviewTask,
   PromotionSortBy,
   PromotionSortDirection,
@@ -880,6 +881,21 @@ export const reviewApi = {
 
   async get(id: number): Promise<ReviewTask> {
     return fetchJson<ReviewTask>(`${WEB_API_PREFIX}/reviews/${id}`)
+  },
+
+  async listMyProgress(params: { status?: string; q?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.status) searchParams.set('status', params.status)
+    if (params.q) searchParams.set('q', params.q)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: ReviewProgress[]; total: number; page: number; size: number }>(
+      `${WEB_API_PREFIX}/reviews/my-progress?${searchParams.toString()}`,
+    )
+  },
+
+  async listMyAttempts(reviewTaskId: number): Promise<ReviewTask[]> {
+    return fetchJson<ReviewTask[]>(`${WEB_API_PREFIX}/reviews/my-progress/${reviewTaskId}/attempts`)
   },
 
   async getSkillDetail(id: number): Promise<ReviewSkillDetail> {
