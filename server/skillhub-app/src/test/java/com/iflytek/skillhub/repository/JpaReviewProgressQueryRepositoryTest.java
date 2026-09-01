@@ -34,6 +34,8 @@ class JpaReviewProgressQueryRepositoryTest {
                 new Skill(namespace.getId(), "alpha-skill", "author-1", SkillVisibility.PUBLIC));
         Skill beta = entityManager.persistFlushFind(
                 new Skill(namespace.getId(), "beta-skill", "author-1", SkillVisibility.PUBLIC));
+        Skill gamma = entityManager.persistFlushFind(
+                new Skill(namespace.getId(), "gamma-skill", "author-1", SkillVisibility.PUBLIC));
 
         persistAttempt(
                 alpha,
@@ -57,6 +59,13 @@ class JpaReviewProgressQueryRepositoryTest {
                 ReviewTaskStatus.APPROVED,
                 Instant.parse("2026-08-29T10:00:00Z"));
         persistAttempt(
+                gamma,
+                namespace,
+                "author-1",
+                "3.0.0",
+                ReviewTaskStatus.REJECTED,
+                Instant.parse("2026-08-28T10:00:00Z"));
+        persistAttempt(
                 beta,
                 namespace,
                 "other-author",
@@ -68,7 +77,7 @@ class JpaReviewProgressQueryRepositoryTest {
 
         var firstPage = repository.findMyProgress("author-1", null, "", 0, 1);
 
-        assertThat(firstPage.total()).isEqualTo(2);
+        assertThat(firstPage.total()).isEqualTo(3);
         assertThat(firstPage.items()).singleElement().satisfies(item -> {
             assertThat(item.skillSlug()).isEqualTo("alpha-skill");
             assertThat(item.latestStatus()).isEqualTo("PENDING");
@@ -76,11 +85,11 @@ class JpaReviewProgressQueryRepositoryTest {
         });
         assertThat(firstPage.statusCounts().pending()).isEqualTo(1);
         assertThat(firstPage.statusCounts().approved()).isEqualTo(1);
-        assertThat(firstPage.statusCounts().rejected()).isZero();
+        assertThat(firstPage.statusCounts().rejected()).isEqualTo(1);
 
         var emptyPage = repository.findMyProgress("author-1", null, "", 8, 1);
         assertThat(emptyPage.items()).isEmpty();
-        assertThat(emptyPage.total()).isEqualTo(2);
+        assertThat(emptyPage.total()).isEqualTo(3);
 
         var searchedAndFiltered = repository.findMyProgress(
                 "author-1", ReviewTaskStatus.APPROVED, "BETA", 0, 20);
@@ -88,6 +97,13 @@ class JpaReviewProgressQueryRepositoryTest {
                 .satisfies(item -> assertThat(item.skillSlug()).isEqualTo("beta-skill"));
         assertThat(searchedAndFiltered.total()).isEqualTo(1);
         assertThat(searchedAndFiltered.statusCounts().approved()).isEqualTo(1);
+
+        var searchMiss = repository.findMyProgress("author-1", null, "missing", 0, 20);
+        assertThat(searchMiss.items()).isEmpty();
+        assertThat(searchMiss.total()).isZero();
+        assertThat(searchMiss.statusCounts().pending()).isZero();
+        assertThat(searchMiss.statusCounts().approved()).isZero();
+        assertThat(searchMiss.statusCounts().rejected()).isZero();
     }
 
     private void persistAttempt(

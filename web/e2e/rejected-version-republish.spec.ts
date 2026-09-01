@@ -93,6 +93,55 @@ test.describe('Rejected version replacement (Real API)', () => {
       expect(replacement.version).toBe(firstPublish.version)
       expect(replacementReviewId).not.toBe(rejectedReviewId)
 
+      const progressResponse = await page.request.get(
+        `/api/web/reviews/my-progress?q=${encodeURIComponent(replacement.slug)}&page=0&size=20`,
+      )
+      expect(progressResponse.status()).toBe(200)
+      const progressBody = await progressResponse.json() as {
+        data: {
+          items: Array<{ latestStatus: string; attemptCount: number }>
+          total: number
+          statusCounts: { pending: number; approved: number; rejected: number }
+        }
+      }
+      expect(progressBody.data.total).toBe(1)
+      expect(progressBody.data.items).toHaveLength(1)
+      expect(progressBody.data.items[0]).toMatchObject({ latestStatus: 'PENDING', attemptCount: 2 })
+      expect(progressBody.data.statusCounts).toEqual({ pending: 1, approved: 0, rejected: 0 })
+
+      const rejectedFilterResponse = await page.request.get(
+        `/api/web/reviews/my-progress?q=${encodeURIComponent(replacement.slug)}&status=REJECTED&page=0&size=20`,
+      )
+      expect(rejectedFilterResponse.status()).toBe(200)
+      const rejectedFilterBody = await rejectedFilterResponse.json() as {
+        data: { items: unknown[]; total: number; statusCounts: { pending: number } }
+      }
+      expect(rejectedFilterBody.data.items).toEqual([])
+      expect(rejectedFilterBody.data.total).toBe(0)
+      expect(rejectedFilterBody.data.statusCounts.pending).toBe(1)
+
+      const missingSearchResponse = await page.request.get(
+        '/api/web/reviews/my-progress?q=definitely-missing-review-progress&page=0&size=20',
+      )
+      expect(missingSearchResponse.status()).toBe(200)
+      const missingSearchBody = await missingSearchResponse.json() as {
+        data: { items: unknown[]; total: number; statusCounts: { pending: number; approved: number; rejected: number } }
+      }
+      expect(missingSearchBody.data.items).toEqual([])
+      expect(missingSearchBody.data.total).toBe(0)
+      expect(missingSearchBody.data.statusCounts).toEqual({ pending: 0, approved: 0, rejected: 0 })
+
+      const outOfRangeResponse = await page.request.get(
+        `/api/web/reviews/my-progress?q=${encodeURIComponent(replacement.slug)}&page=99&size=1`,
+      )
+      expect(outOfRangeResponse.status()).toBe(200)
+      const outOfRangeBody = await outOfRangeResponse.json() as {
+        data: { items: unknown[]; total: number; statusCounts: { pending: number } }
+      }
+      expect(outOfRangeBody.data.items).toEqual([])
+      expect(outOfRangeBody.data.total).toBe(1)
+      expect(outOfRangeBody.data.statusCounts.pending).toBe(1)
+
       const attemptsResponse = await page.request.get(
         `/api/web/reviews/my-progress/${replacementReviewId}/attempts`,
       )

@@ -326,10 +326,15 @@ class ReviewPortalControllerTest {
         ReviewTask previous = createReviewTask(8L, 20L, "author-1", ReviewTaskStatus.REJECTED);
         setField(previous, "skillId", 30L);
         setField(previous, "skillVersion", "1.0.0");
+        ReviewTask otherAuthor = createReviewTask(7L, 20L, "author-2", ReviewTaskStatus.REJECTED);
+        setField(otherAuthor, "skillId", 30L);
+        setField(otherAuthor, "skillVersion", "1.0.0");
         given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
         given(reviewTaskRepository.findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
                 "author-1", 30L, "1.0.0"))
                 .willReturn(List.of(latest, previous));
+        given(reviewTaskRepository.findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(30L, "1.0.0"))
+                .willReturn(List.of(latest, previous, otherAuthor));
         given(governanceQueryRepository.getReviewTaskResponses(List.of(latest, previous)))
                 .willReturn(List.of(toReviewResponse(latest), toReviewResponse(previous)));
 
@@ -337,7 +342,12 @@ class ReviewPortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].id").value(12))
-                .andExpect(jsonPath("$.data[1].id").value(8));
+                .andExpect(jsonPath("$.data[1].id").value(8))
+                .andExpect(jsonPath("$.data[0].submittedBy").value("author-1"))
+                .andExpect(jsonPath("$.data[1].submittedBy").value("author-1"));
+
+        verify(reviewTaskRepository, never())
+                .findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(30L, "1.0.0");
     }
 
     @Test
@@ -345,7 +355,7 @@ class ReviewPortalControllerTest {
         ReviewTask latest = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.PENDING);
         setField(latest, "skillId", 30L);
         setField(latest, "skillVersion", "1.0.0");
-        ReviewTask previous = createReviewTask(8L, 20L, "author-1", ReviewTaskStatus.REJECTED);
+        ReviewTask previous = createReviewTask(8L, 20L, "author-2", ReviewTaskStatus.REJECTED);
         setField(previous, "skillId", 30L);
         setField(previous, "skillVersion", "1.0.0");
         Namespace namespace = createNamespace(20L, "team-a");
@@ -368,7 +378,41 @@ class ReviewPortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].id").value(12))
-                .andExpect(jsonPath("$.data[1].id").value(8));
+                .andExpect(jsonPath("$.data[1].id").value(8))
+                .andExpect(jsonPath("$.data[0].submittedBy").value("author-1"))
+                .andExpect(jsonPath("$.data[1].submittedBy").value("author-2"));
+    }
+
+    @Test
+    void listReviewAttempts_allowsNamespaceAdminToReadCrossAuthorHistory() throws Exception {
+        ReviewTask latest = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.PENDING);
+        setField(latest, "skillId", 30L);
+        setField(latest, "skillVersion", "1.0.0");
+        ReviewTask previous = createReviewTask(8L, 20L, "author-2", ReviewTaskStatus.REJECTED);
+        setField(previous, "skillId", 30L);
+        setField(previous, "skillVersion", "1.0.0");
+        Namespace namespace = createNamespace(20L, "team-a");
+        stubNamespaceRoles("namespace-admin", List.of(new NamespaceMember(
+                20L, "namespace-admin", NamespaceRole.ADMIN)));
+        given(rbacService.getUserRoleCodes("namespace-admin")).willReturn(Set.of());
+        given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(reviewService.canReviewNamespace(
+                latest,
+                "namespace-admin",
+                namespace.getType(),
+                Map.of(20L, NamespaceRole.ADMIN),
+                Set.of())).willReturn(true);
+        given(reviewTaskRepository.findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(30L, "1.0.0"))
+                .willReturn(List.of(latest, previous));
+        given(governanceQueryRepository.getReviewTaskResponses(List.of(latest, previous)))
+                .willReturn(List.of(toReviewResponse(latest), toReviewResponse(previous)));
+
+        mockMvc.perform(get("/api/v1/reviews/12/attempts").with(auth("namespace-admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].submittedBy").value("author-1"))
+                .andExpect(jsonPath("$.data[1].submittedBy").value("author-2"));
     }
 
     @Test

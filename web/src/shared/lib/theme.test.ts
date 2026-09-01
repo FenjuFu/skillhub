@@ -50,4 +50,13 @@ describe('theme preference', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark')
   })
+
+  it('ignores storage write failures', () => {
+    expect(() => saveTheme('dark', {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('blocked')
+      },
+    })).not.toThrow()
+  })
 })
