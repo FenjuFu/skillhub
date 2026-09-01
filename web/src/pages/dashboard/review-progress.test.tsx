@@ -36,6 +36,11 @@ vi.mock('@/features/review/use-my-review-progress', () => ({
       total: 1,
       page: 0,
       size: 20,
+      statusCounts: {
+        pending: 0,
+        approved: 0,
+        rejected: 1,
+      },
     },
     isLoading: false,
     isError: false,
@@ -53,6 +58,9 @@ describe('ReviewProgressPage', () => {
     expect(html).toContain('reviewProgress.statusRejected')
     expect(html).toContain('reviewProgress.resubmit')
     expect(html).toContain('reviewProgress.history')
+    expect(html).toContain('reviewProgress.statusSummary')
+    expect(html).toContain('reviewProgress.latestReviewed')
+    expect(html).toContain('/dashboard/publish')
     expect(html).not.toContain('reviews.typeSkill')
   })
 })

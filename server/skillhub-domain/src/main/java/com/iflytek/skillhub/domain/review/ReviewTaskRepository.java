@@ -18,6 +18,8 @@ public interface ReviewTaskRepository {
     Page<ReviewTask> findBySubmittedByAndStatus(String submittedBy, ReviewTaskStatus status, Pageable pageable);
     List<ReviewTask> findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
             String submittedBy, Long skillId, String skillVersion);
+    List<ReviewTask> findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+            Long skillId, String skillVersion);
     boolean existsByNamespaceId(Long namespaceId);
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
     void deleteBySkillId(Long skillId);

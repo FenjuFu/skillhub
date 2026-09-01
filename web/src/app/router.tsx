@@ -287,9 +287,20 @@ const dashboardPublishRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/publish',
   beforeLoad: requireAuth,
-  validateSearch: (search: Record<string, unknown>): { namespace?: string; visibility?: string } => ({
+  validateSearch: (search: Record<string, unknown>): {
+    namespace?: string
+    visibility?: string
+    resubmitSkill?: string
+    resubmitVersion?: string
+  } => ({
     namespace: typeof search.namespace === 'string' && search.namespace ? search.namespace : undefined,
     visibility: typeof search.visibility === 'string' && search.visibility ? search.visibility : undefined,
+    resubmitSkill: typeof search.resubmitSkill === 'string' && search.resubmitSkill
+      ? search.resubmitSkill
+      : undefined,
+    resubmitVersion: typeof search.resubmitVersion === 'string' && search.resubmitVersion
+      ? search.resubmitVersion
+      : undefined,
   }),
   component: PublishPage,
 })

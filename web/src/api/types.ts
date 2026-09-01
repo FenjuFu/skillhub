@@ -454,6 +454,20 @@ export interface ReviewProgress {
   attemptCount: number
 }
 
+export interface ReviewProgressStatusCounts {
+  pending: number
+  approved: number
+  rejected: number
+}
+
+export interface ReviewProgressPage {
+  items: ReviewProgress[]
+  total: number
+  page: number
+  size: number
+  statusCounts: ReviewProgressStatusCounts
+}
+
 export interface ReviewSkillDetail {
   skill: SkillDetail
   versions: SkillVersion[]

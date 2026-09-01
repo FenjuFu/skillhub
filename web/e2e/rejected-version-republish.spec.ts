@@ -95,11 +95,24 @@ test.describe('Rejected version replacement (Real API)', () => {
       expect(attemptsBody.data.map((attempt) => attempt.status)).toEqual(['PENDING', 'REJECTED'])
       expect(attemptsBody.data[1]?.skillVersionId).toBeNull()
 
+      const reviewerAttemptsResponse = await adminPage.request.get(
+        `/api/web/reviews/${replacementReviewId}/attempts`,
+      )
+      expect(reviewerAttemptsResponse.status()).toBe(200)
+      const reviewerAttemptsBody = await reviewerAttemptsResponse.json() as {
+        data: Array<{ id: number; status: string }>
+      }
+      expect(reviewerAttemptsBody.data.map((attempt) => attempt.id)).toEqual([
+        replacementReviewId,
+        rejectedReviewId,
+      ])
+
       const replacedReviewResponse = await adminPage.request.get(`/api/web/reviews/${rejectedReviewId}`)
       expect(replacedReviewResponse.status()).toBe(200)
 
       await page.goto('/dashboard/review-progress')
       await expect(page.getByRole('heading', { name: 'My Review Progress' })).toBeVisible()
+      await expect(page.getByRole('button', { name: /In review/ })).toContainText('1')
       const progressCard = page.locator('article').filter({ hasText: replacement.slug })
       await expect(progressCard).toContainText('In review')
       await expect(progressCard).toContainText('2 submissions')
@@ -107,12 +120,22 @@ test.describe('Rejected version replacement (Real API)', () => {
       await expect(progressCard).toContainText('Attempt 2')
       await expect(progressCard).toContainText('Attempt 1')
       await expect(progressCard).toContainText('Rejected by Playwright E2E')
+      await expect(progressCard).toContainText('Reviewed by')
       await page.screenshot({ path: testInfo.outputPath('author-review-progress-desktop.png'), fullPage: true })
 
       await page.setViewportSize({ width: 390, height: 844 })
       await expect(progressCard).toBeVisible()
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
       await page.screenshot({ path: testInfo.outputPath('author-review-progress-mobile.png'), fullPage: true })
+
+      await adminPage.goto(`/dashboard/reviews/${replacementReviewId}`)
+      await expect(adminPage.getByRole('heading', { name: 'Submission History' })).toBeVisible()
+      await expect(adminPage.getByText('Attempt 2')).toBeVisible()
+      await expect(adminPage.getByText('Attempt 1')).toBeVisible()
+
+      await progressCard.getByRole('link', { name: 'Edit and resubmit' }).click()
+      await expect(page).toHaveURL(/\/dashboard\/publish/)
+      await expect(page.getByText(new RegExp(`Resubmit .* v${replacement.version}`))).toBeVisible()
       const unexpectedConsoleErrors = consoleErrors.filter((message) => (
         !message.includes("frame-ancestors' is ignored when delivered via a <meta> element")
       ))

@@ -8,7 +8,7 @@ import com.iflytek.skillhub.dto.NamespaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.PromotionResponseDto;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
-import com.iflytek.skillhub.dto.ReviewProgressResponse;
+import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
@@ -95,7 +95,7 @@ public class GovernanceWorkflowAppService {
         return reviewPortalAppService.listMySubmissions(page, size, userId);
     }
 
-    public PageResponse<ReviewProgressResponse> listMyReviewProgress(
+    public ReviewProgressPageResponse listMyReviewProgress(
             String status,
             String query,
             int page,
@@ -106,6 +106,13 @@ public class GovernanceWorkflowAppService {
 
     public List<ReviewTaskResponse> listMyReviewAttempts(Long reviewTaskId, String userId) {
         return reviewPortalAppService.listMyAttempts(reviewTaskId, userId);
+    }
+
+    public List<ReviewTaskResponse> listReviewAttempts(
+            Long reviewTaskId,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        return reviewPortalAppService.listReviewAttempts(reviewTaskId, userId, userNsRoles);
     }
 
     public ReviewTaskResponse getReviewDetail(Long reviewTaskId,

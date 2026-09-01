@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { ChevronDown, ChevronUp, Clock3, RotateCcw, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { ReviewProgress, ReviewTask } from '@/api/types'
+import type { ReviewProgress } from '@/api/types'
+import { ReviewAttemptTimeline } from '@/features/review/review-attempt-timeline'
 import { useMyReviewAttempts, useMyReviewProgress } from '@/features/review/use-my-review-progress'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
@@ -101,6 +102,35 @@ export function ReviewProgressPage() {
             </div>
           </div>
 
+          {progressQuery.data ? (
+            <div className="grid gap-3 sm:grid-cols-3" aria-label={t('reviewProgress.statusSummary')}>
+              {([
+                ['PENDING', progressQuery.data.statusCounts.pending, 'statusPending'],
+                ['APPROVED', progressQuery.data.statusCounts.approved, 'statusApproved'],
+                ['REJECTED', progressQuery.data.statusCounts.rejected, 'statusRejected'],
+              ] as const).map(([status, count, labelKey]) => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={search.status === status}
+                  onClick={() => updateSearch({
+                    status: search.status === status ? null : status,
+                    page: 0,
+                  })}
+                  className={cn(
+                    'rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    search.status === status && 'border-primary/40 bg-primary/5',
+                  )}
+                >
+                  <span className="block text-2xl font-semibold text-foreground">{count}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t(`reviewProgress.${labelKey}`)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {progressQuery.isLoading ? (
             <div className="space-y-3" aria-label={t('reviewProgress.loading')}>
               {Array.from({ length: 4 }).map((_, index) => (
@@ -182,6 +212,9 @@ function ProgressItem({
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <span>{t('reviewProgress.latestSubmitted', { time: formatLocalDateTime(item.latestSubmittedAt, locale) })}</span>
+            {item.latestReviewedAt ? (
+              <span>{t('reviewProgress.latestReviewed', { time: formatLocalDateTime(item.latestReviewedAt, locale) })}</span>
+            ) : null}
             <span>{t('reviewProgress.attemptCount', { count: item.attemptCount })}</span>
           </div>
           {item.latestReviewComment ? (
@@ -192,8 +225,12 @@ function ProgressItem({
         <div className="flex shrink-0 flex-wrap gap-2">
           {status === 'REJECTED' ? (
             <Link
-              to="/space/$namespace/$slug"
-              params={{ namespace: item.namespace, slug: item.skillSlug }}
+              to="/dashboard/publish"
+              search={{
+                namespace: item.namespace,
+                resubmitSkill: item.skillSlug,
+                resubmitVersion: item.skillVersion,
+              }}
               className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-2')}
             >
               <RotateCcw className="h-4 w-4" />
@@ -221,35 +258,10 @@ function ProgressItem({
           ) : attemptsQuery.isError ? (
             <p className="text-sm text-destructive">{t('reviewProgress.historyError')}</p>
           ) : (
-            <AttemptTimeline attempts={attemptsQuery.data ?? []} locale={locale} />
+            <ReviewAttemptTimeline attempts={attemptsQuery.data ?? []} locale={locale} />
           )}
         </div>
       ) : null}
     </article>
-  )
-}
-
-function AttemptTimeline({ attempts, locale }: { attempts: ReviewTask[]; locale: string }) {
-  const { t } = useTranslation()
-
-  return (
-    <ol className="space-y-3">
-      {attempts.map((attempt, index) => (
-        <li key={attempt.id} className="grid gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-sm md:grid-cols-[auto_1fr_auto] md:items-start">
-          <span className="font-medium text-foreground">
-            {t('reviewProgress.attemptNumber', { number: attempts.length - index })}
-          </span>
-          <div className="min-w-0">
-            <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-xs font-medium', statusClassNames[attempt.status])}>
-              {t(`reviewProgress.status${attempt.status === 'PENDING' ? 'Pending' : attempt.status === 'APPROVED' ? 'Approved' : 'Rejected'}`)}
-            </span>
-            {attempt.reviewComment ? <p className="mt-2 whitespace-pre-wrap text-foreground/85">{attempt.reviewComment}</p> : null}
-          </div>
-          <time className="text-xs text-muted-foreground" dateTime={attempt.submittedAt}>
-            {formatLocalDateTime(attempt.submittedAt, locale)}
-          </time>
-        </li>
-      ))}
-    </ol>
   )
 }

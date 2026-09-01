@@ -1,8 +1,9 @@
 package com.iflytek.skillhub.repository;
 
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
-import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
 import com.iflytek.skillhub.dto.ReviewProgressResponse;
+import com.iflytek.skillhub.dto.ReviewProgressStatusCounts;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.sql.Timestamp;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepository {
 
-    private static final String MY_PROGRESS_SQL = """
+    private static final String RANKED_CTE = """
             WITH ranked AS (
                 SELECT task.id,
                        task.skill_id,
@@ -45,8 +46,10 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                 SELECT *
                 FROM ranked
                 WHERE attempt_rank = 1
-                  AND (:status = '' OR status = :status)
             )
+            """;
+
+    private static final String MY_PROGRESS_SQL = RANKED_CTE + """
             SELECT latest.id,
                    latest.skill_id,
                    namespace.slug,
@@ -56,16 +59,31 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                    latest.review_comment,
                    latest.submitted_at,
                    latest.reviewed_at,
-                   latest.attempt_count,
-                   COUNT(*) OVER () AS total_groups
+                   latest.attempt_count
+            FROM latest
+            JOIN skill ON skill.id = latest.skill_id
+            JOIN namespace ON namespace.id = latest.namespace_id
+            WHERE (
+                    :query = ''
+                    OR LOWER(skill.slug) LIKE :queryPattern
+                    OR LOWER(namespace.slug) LIKE :queryPattern
+                  )
+              AND (:status = '' OR latest.status = :status)
+            ORDER BY latest.submitted_at DESC, latest.id DESC
+            OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY
+            """;
+
+    private static final String MY_PROGRESS_SUMMARY_SQL = RANKED_CTE + """
+            SELECT COUNT(*) FILTER (WHERE :status = '' OR latest.status = :status) AS filtered_total,
+                   COUNT(*) FILTER (WHERE latest.status = 'PENDING') AS pending_count,
+                   COUNT(*) FILTER (WHERE latest.status = 'APPROVED') AS approved_count,
+                   COUNT(*) FILTER (WHERE latest.status = 'REJECTED') AS rejected_count
             FROM latest
             JOIN skill ON skill.id = latest.skill_id
             JOIN namespace ON namespace.id = latest.namespace_id
             WHERE :query = ''
                OR LOWER(skill.slug) LIKE :queryPattern
                OR LOWER(namespace.slug) LIKE :queryPattern
-            ORDER BY latest.submitted_at DESC, latest.id DESC
-            OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY
             """;
 
     private final EntityManager entityManager;
@@ -76,26 +94,54 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ReviewProgressResponse> findMyProgress(
+    public ReviewProgressPageResponse findMyProgress(
             String userId,
             ReviewTaskStatus status,
             String query,
             int page,
             int size) {
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
-        Query nativeQuery = entityManager.createNativeQuery(MY_PROGRESS_SQL)
-                .setParameter("userId", userId)
-                .setParameter("status", status != null ? status.name() : "")
-                .setParameter("query", normalizedQuery)
-                .setParameter("queryPattern", "%" + normalizedQuery + "%")
+        String statusName = status != null ? status.name() : "";
+        String queryPattern = "%" + normalizedQuery + "%";
+        Query nativeQuery = bindFilters(
+                entityManager.createNativeQuery(MY_PROGRESS_SQL),
+                userId,
+                statusName,
+                normalizedQuery,
+                queryPattern)
                 .setParameter("offset", page * size)
                 .setParameter("size", size);
+        Query summaryQuery = bindFilters(
+                entityManager.createNativeQuery(MY_PROGRESS_SUMMARY_SQL),
+                userId,
+                statusName,
+                normalizedQuery,
+                queryPattern);
 
         @SuppressWarnings("unchecked")
         List<Object[]> rows = nativeQuery.getResultList();
         List<ReviewProgressResponse> items = rows.stream().map(this::mapRow).toList();
-        long total = rows.isEmpty() ? 0 : number(rows.get(0)[10]).longValue();
-        return new PageResponse<>(items, total, page, size);
+        Object[] summary = (Object[]) summaryQuery.getSingleResult();
+        long total = number(summary[0]).longValue();
+        ReviewProgressStatusCounts statusCounts = new ReviewProgressStatusCounts(
+                number(summary[1]).longValue(),
+                number(summary[2]).longValue(),
+                number(summary[3]).longValue()
+        );
+        return new ReviewProgressPageResponse(items, total, page, size, statusCounts);
+    }
+
+    private Query bindFilters(
+            Query query,
+            String userId,
+            String status,
+            String normalizedQuery,
+            String queryPattern) {
+        return query
+                .setParameter("userId", userId)
+                .setParameter("status", status)
+                .setParameter("query", normalizedQuery)
+                .setParameter("queryPattern", queryPattern);
     }
 
     private ReviewProgressResponse mapRow(Object[] row) {

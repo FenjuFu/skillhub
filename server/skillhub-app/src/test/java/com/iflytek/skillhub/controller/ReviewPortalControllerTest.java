@@ -17,6 +17,8 @@ import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
 import com.iflytek.skillhub.dto.ReviewProgressResponse;
+import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
+import com.iflytek.skillhub.dto.ReviewProgressStatusCounts;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
@@ -297,13 +299,21 @@ class ReviewPortalControllerTest {
                 2L
         );
         given(reviewProgressQueryRepository.findMyProgress("author-1", null, "", 0, 20))
-                .willReturn(new com.iflytek.skillhub.dto.PageResponse<>(List.of(item), 1, 0, 20));
+                .willReturn(new ReviewProgressPageResponse(
+                        List.of(item),
+                        1,
+                        0,
+                        20,
+                        new ReviewProgressStatusCounts(0, 0, 1)
+                ));
 
         mockMvc.perform(get("/api/v1/reviews/my-progress").with(auth("author-1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].skillSlug").value("skill-a"))
                 .andExpect(jsonPath("$.data.items[0].attemptCount").value(2))
-                .andExpect(jsonPath("$.data.items[0].latestStatus").value("REJECTED"));
+                .andExpect(jsonPath("$.data.items[0].latestStatus").value("REJECTED"))
+                .andExpect(jsonPath("$.data.statusCounts.pending").value(0))
+                .andExpect(jsonPath("$.data.statusCounts.rejected").value(1));
 
         verify(reviewProgressQueryRepository).findMyProgress("author-1", null, "", 0, 20);
     }
@@ -328,6 +338,62 @@ class ReviewPortalControllerTest {
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].id").value(12))
                 .andExpect(jsonPath("$.data[1].id").value(8));
+    }
+
+    @Test
+    void listReviewAttempts_allowsAuthorizedReviewerToReadVersionHistory() throws Exception {
+        ReviewTask latest = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.PENDING);
+        setField(latest, "skillId", 30L);
+        setField(latest, "skillVersion", "1.0.0");
+        ReviewTask previous = createReviewTask(8L, 20L, "author-1", ReviewTaskStatus.REJECTED);
+        setField(previous, "skillId", 30L);
+        setField(previous, "skillVersion", "1.0.0");
+        Namespace namespace = createNamespace(20L, "team-a");
+        stubNamespaceRoles("reviewer-1", List.of());
+        given(rbacService.getUserRoleCodes("reviewer-1")).willReturn(Set.of("SKILL_ADMIN"));
+        given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(reviewService.canViewReview(
+                latest,
+                "reviewer-1",
+                namespace.getType(),
+                Map.of(),
+                Set.of("SKILL_ADMIN"))).willReturn(true);
+        given(reviewTaskRepository.findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(30L, "1.0.0"))
+                .willReturn(List.of(latest, previous));
+        given(governanceQueryRepository.getReviewTaskResponses(List.of(latest, previous)))
+                .willReturn(List.of(toReviewResponse(latest), toReviewResponse(previous)));
+
+        mockMvc.perform(get("/api/v1/reviews/12/attempts").with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].id").value(12))
+                .andExpect(jsonPath("$.data[1].id").value(8));
+    }
+
+    @Test
+    void listReviewAttempts_forbidsUnrelatedUser() throws Exception {
+        ReviewTask latest = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.PENDING);
+        setField(latest, "skillId", 30L);
+        setField(latest, "skillVersion", "1.0.0");
+        Namespace namespace = createNamespace(20L, "team-a");
+        stubNamespaceRoles("other-user", List.of());
+        given(rbacService.getUserRoleCodes("other-user")).willReturn(Set.of());
+        given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(reviewService.canViewReview(
+                latest,
+                "other-user",
+                namespace.getType(),
+                Map.of(),
+                Set.of())).willReturn(false);
+
+        mockMvc.perform(get("/api/v1/reviews/12/attempts").with(auth("other-user")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+
+        verify(reviewTaskRepository, never())
+                .findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(30L, "1.0.0");
     }
 
     @Test

@@ -13,7 +13,7 @@ import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.dto.PageResponse;
-import com.iflytek.skillhub.dto.ReviewProgressResponse;
+import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.GovernanceQueryRepository;
@@ -217,7 +217,7 @@ public class ReviewPortalAppService {
         ));
     }
 
-    public PageResponse<ReviewProgressResponse> listMyProgress(
+    public ReviewProgressPageResponse listMyProgress(
             String status,
             String query,
             int page,
@@ -247,6 +247,22 @@ public class ReviewPortalAppService {
         List<ReviewTask> attempts = reviewTaskRepository
                 .findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
                         userId, anchor.getSkillId(), anchor.getSkillVersion());
+        return governanceQueryRepository.getReviewTaskResponses(attempts);
+    }
+
+    public List<ReviewTaskResponse> listReviewAttempts(
+            Long reviewTaskId,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        ReviewTask anchor = reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+        if (!canViewReview(anchor, userId, normalizeRoles(userNsRoles))) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
+
+        List<ReviewTask> attempts = reviewTaskRepository
+                .findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+                        anchor.getSkillId(), anchor.getSkillVersion());
         return governanceQueryRepository.getReviewTaskResponses(attempts);
     }
 

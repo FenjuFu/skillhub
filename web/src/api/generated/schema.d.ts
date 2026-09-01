@@ -2404,6 +2404,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/reviews/{id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReviewAttempts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReviewAttempts_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reviews/{id}": {
         parameters: {
             query?: never;
@@ -4693,6 +4725,15 @@ export interface components {
             downloadUrl?: string;
             activeVersion?: string;
         };
+        ApiResponseListReviewTaskResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ReviewTaskResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
         ApiResponsePageResponseReviewTaskResponse: {
             /** Format: int32 */
             code?: number;
@@ -4711,25 +4752,16 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
-        ApiResponseListReviewTaskResponse: {
+        ApiResponseReviewProgressPageResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["ReviewTaskResponse"][];
+            data?: components["schemas"]["ReviewProgressPageResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        ApiResponsePageResponseReviewProgressResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseReviewProgressResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseReviewProgressResponse: {
+        ReviewProgressPageResponse: {
             items?: components["schemas"]["ReviewProgressResponse"][];
             /** Format: int64 */
             total?: number;
@@ -4737,6 +4769,7 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+            statusCounts?: components["schemas"]["ReviewProgressStatusCounts"];
         };
         ReviewProgressResponse: {
             /** Format: int64 */
@@ -4754,6 +4787,14 @@ export interface components {
             latestReviewedAt?: string;
             /** Format: int64 */
             attemptCount?: number;
+        };
+        ReviewProgressStatusCounts: {
+            /** Format: int64 */
+            pending?: number;
+            /** Format: int64 */
+            approved?: number;
+            /** Format: int64 */
+            rejected?: number;
         };
         ApiResponsePageResponsePromotionResponseDto: {
             /** Format: int32 */
@@ -10137,6 +10178,50 @@ export interface operations {
             };
         };
     };
+    listReviewAttempts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListReviewTaskResponse"];
+                };
+            };
+        };
+    };
+    listReviewAttempts_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListReviewTaskResponse"];
+                };
+            };
+        };
+    };
     getReviewDetail: {
         parameters: {
             query?: never;
@@ -10339,7 +10424,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewProgressResponse"];
+                    "*/*": components["schemas"]["ApiResponseReviewProgressPageResponse"];
                 };
             };
         };
@@ -10364,7 +10449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewProgressResponse"];
+                    "*/*": components["schemas"]["ApiResponseReviewProgressPageResponse"];
                 };
             };
         };

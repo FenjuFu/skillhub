@@ -8,14 +8,14 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.ReviewActionRequest;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
-import com.iflytek.skillhub.dto.ReviewProgressResponse;
+import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
 import com.iflytek.skillhub.dto.ReviewTaskRequest;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -139,7 +139,7 @@ public class ReviewController extends BaseApiController {
     }
 
     @GetMapping("/my-progress")
-    public ApiResponse<PageResponse<ReviewProgressResponse>> listMyProgress(
+    public ApiResponse<ReviewProgressPageResponse> listMyProgress(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
@@ -156,6 +156,18 @@ public class ReviewController extends BaseApiController {
             @PathVariable Long id,
             @RequestAttribute("userId") String userId) {
         return ok("response.success.read", governanceWorkflowAppService.listMyReviewAttempts(id, userId));
+    }
+
+    @GetMapping("/{id}/attempts")
+    public ApiResponse<List<ReviewTaskResponse>> listReviewAttempts(
+            @PathVariable Long id,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false)
+            Map<Long, NamespaceRole> userNsRoles) {
+        return ok(
+                "response.success.read",
+                governanceWorkflowAppService.listReviewAttempts(id, userId, userNsRoles)
+        );
     }
 
     @GetMapping("/{id}")

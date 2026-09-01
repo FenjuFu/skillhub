@@ -32,6 +32,9 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
     List<ReviewTask> findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
             String submittedBy, Long skillId, String skillVersion);
 
+    List<ReviewTask> findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+            Long skillId, String skillVersion);
+
     boolean existsByNamespaceId(Long namespaceId);
 
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
