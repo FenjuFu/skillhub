@@ -109,7 +109,7 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                 statusName,
                 normalizedQuery,
                 queryPattern)
-                .setParameter("offset", page * size)
+                .setParameter("offset", (long) page * size)
                 .setParameter("size", size);
         Query summaryQuery = bindFilters(
                 entityManager.createNativeQuery(MY_PROGRESS_SUMMARY_SQL),

@@ -91,6 +91,11 @@ class JpaReviewProgressQueryRepositoryTest {
         assertThat(emptyPage.items()).isEmpty();
         assertThat(emptyPage.total()).isEqualTo(3);
 
+        var maximumPage = repository.findMyProgress(
+                "author-1", null, "", Integer.MAX_VALUE, 100);
+        assertThat(maximumPage.items()).isEmpty();
+        assertThat(maximumPage.total()).isEqualTo(3);
+
         var searchedAndFiltered = repository.findMyProgress(
                 "author-1", ReviewTaskStatus.APPROVED, "BETA", 0, 20);
         assertThat(searchedAndFiltered.items()).singleElement()

@@ -142,6 +142,17 @@ test.describe('Rejected version replacement (Real API)', () => {
       expect(outOfRangeBody.data.total).toBe(1)
       expect(outOfRangeBody.data.statusCounts.pending).toBe(1)
 
+      const maximumPageResponse = await page.request.get(
+        `/api/web/reviews/my-progress?q=${encodeURIComponent(replacement.slug)}&page=2147483647&size=100`,
+      )
+      expect(maximumPageResponse.status()).toBe(200)
+      const maximumPageBody = await maximumPageResponse.json() as {
+        data: { items: unknown[]; total: number; statusCounts: { pending: number } }
+      }
+      expect(maximumPageBody.data.items).toEqual([])
+      expect(maximumPageBody.data.total).toBe(1)
+      expect(maximumPageBody.data.statusCounts.pending).toBe(1)
+
       const attemptsResponse = await page.request.get(
         `/api/web/reviews/my-progress/${replacementReviewId}/attempts`,
       )
