@@ -353,7 +353,7 @@ class ReviewPortalControllerTest {
         given(rbacService.getUserRoleCodes("reviewer-1")).willReturn(Set.of("SKILL_ADMIN"));
         given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
         given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
-        given(reviewService.canViewReview(
+        given(reviewService.canReviewNamespace(
                 latest,
                 "reviewer-1",
                 namespace.getType(),
@@ -372,6 +372,32 @@ class ReviewPortalControllerTest {
     }
 
     @Test
+    void listReviewAttempts_forbidsSubmitterWithoutReviewerRole() throws Exception {
+        ReviewTask ownAttempt = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.REJECTED);
+        setField(ownAttempt, "skillId", 30L);
+        setField(ownAttempt, "skillVersion", "1.0.0");
+        Namespace namespace = createNamespace(20L, "team-a");
+        stubNamespaceRoles("author-1", List.of(new NamespaceMember(
+                20L, "author-1", NamespaceRole.MEMBER)));
+        given(rbacService.getUserRoleCodes("author-1")).willReturn(Set.of());
+        given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(ownAttempt));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(reviewService.canReviewNamespace(
+                ownAttempt,
+                "author-1",
+                namespace.getType(),
+                Map.of(20L, NamespaceRole.MEMBER),
+                Set.of())).willReturn(false);
+
+        mockMvc.perform(get("/api/v1/reviews/12/attempts").with(auth("author-1")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+
+        verify(reviewTaskRepository, never())
+                .findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(30L, "1.0.0");
+    }
+
+    @Test
     void listReviewAttempts_forbidsUnrelatedUser() throws Exception {
         ReviewTask latest = createReviewTask(12L, 20L, "author-1", ReviewTaskStatus.PENDING);
         setField(latest, "skillId", 30L);
@@ -381,7 +407,7 @@ class ReviewPortalControllerTest {
         given(rbacService.getUserRoleCodes("other-user")).willReturn(Set.of());
         given(reviewTaskRepository.findById(12L)).willReturn(Optional.of(latest));
         given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
-        given(reviewService.canViewReview(
+        given(reviewService.canReviewNamespace(
                 latest,
                 "other-user",
                 namespace.getType(),

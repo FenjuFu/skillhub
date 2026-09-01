@@ -26,6 +26,8 @@ test.describe('Rejected version replacement (Real API)', () => {
   test('re-publishes the same version after rejection', async ({ page, browser }, testInfo) => {
     const consoleErrors: string[] = []
     const pageErrors: string[] = []
+    const adminConsoleErrors: string[] = []
+    const adminPageErrors: string[] = []
     page.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(message.text())
     })
@@ -36,6 +38,10 @@ test.describe('Rejected version replacement (Real API)', () => {
 
     const adminContext = await browser.newContext()
     const adminPage = await adminContext.newPage()
+    adminPage.on('console', (message) => {
+      if (message.type() === 'error') adminConsoleErrors.push(message.text())
+    })
+    adminPage.on('pageerror', (error) => adminPageErrors.push(error.message))
     const adminBuilder = new E2eTestDataBuilder(adminPage, testInfo)
     await loginWithCredentials(adminPage, adminCredentials(), testInfo)
     await adminBuilder.init()
@@ -141,6 +147,8 @@ test.describe('Rejected version replacement (Real API)', () => {
       ))
       expect(unexpectedConsoleErrors).toEqual([])
       expect(pageErrors).toEqual([])
+      expect(adminConsoleErrors).toEqual([])
+      expect(adminPageErrors).toEqual([])
     } finally {
       await adminBuilder.cleanup()
       await adminContext.close()

@@ -256,7 +256,15 @@ public class ReviewPortalAppService {
             Map<Long, NamespaceRole> userNsRoles) {
         ReviewTask anchor = reviewTaskRepository.findById(reviewTaskId)
                 .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
-        if (!canViewReview(anchor, userId, normalizeRoles(userNsRoles))) {
+        Namespace namespace = namespaceRepository.findById(anchor.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException(
+                        "namespace.not_found", anchor.getNamespaceId()));
+        if (!reviewService.canReviewNamespace(
+                anchor,
+                userId,
+                namespace.getType(),
+                normalizeRoles(userNsRoles),
+                platformRoles(userId))) {
             throw new DomainForbiddenException("review.no_permission");
         }
 
