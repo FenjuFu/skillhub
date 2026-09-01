@@ -21,24 +21,29 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       title={label}
       onClick={toggleTheme}
       className={cn(
-        'group relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-card/80 text-muted-foreground shadow-sm transition-colors duration-200 hover:border-primary/35 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'group relative inline-flex h-10 w-[4.5rem] shrink-0 items-center rounded-full border border-border bg-muted/70 p-1 text-muted-foreground shadow-sm transition-[background-color,border-color] duration-200 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         className,
       )}
     >
-      <Sun
+      <span
         aria-hidden="true"
         className={cn(
-          'absolute h-[18px] w-[18px] transition-[opacity,transform] duration-200 motion-reduce:transition-none',
-          isDark ? 'rotate-90 scale-75 opacity-0' : 'rotate-0 scale-100 opacity-100',
+          'absolute left-1 top-1 h-8 w-8 rounded-full border border-border/80 bg-card shadow-[0_3px_10px_-4px_hsl(var(--foreground)/0.45)] transition-transform duration-200 ease-out motion-reduce:transition-none',
+          isDark && 'translate-x-8',
         )}
       />
-      <Moon
-        aria-hidden="true"
-        className={cn(
-          'absolute h-[18px] w-[18px] transition-[opacity,transform] duration-200 motion-reduce:transition-none',
-          isDark ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-75 opacity-0',
-        )}
-      />
+      <span className="relative z-10 inline-flex h-8 w-8 items-center justify-center">
+        <Sun
+          aria-hidden="true"
+          className={cn('h-4 w-4 transition-colors duration-200', !isDark && 'text-foreground')}
+        />
+      </span>
+      <span className="relative z-10 inline-flex h-8 w-8 items-center justify-center">
+        <Moon
+          aria-hidden="true"
+          className={cn('h-4 w-4 transition-colors duration-200', isDark && 'text-foreground')}
+        />
+      </span>
     </button>
   )
 }

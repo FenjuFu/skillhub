@@ -59,9 +59,13 @@ test.describe('Light and dark theme', () => {
 
     await page.goto('/')
     await expect(page.locator('html')).not.toHaveClass(/dark/)
+    const header = page.locator('header')
+    const lightHeaderBackground = await header.evaluate((element) => getComputedStyle(element).backgroundColor)
 
     await page.getByRole('button', { name: 'Switch to dark theme' }).click()
     await expect(page.locator('html')).toHaveClass(/dark/)
+    await expect.poll(() => header.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .not.toBe(lightHeaderBackground)
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem('skillhub-theme'))).toBe('dark')
 
     await page.reload()
@@ -73,7 +77,7 @@ test.describe('Light and dark theme', () => {
     ).__themeAtFirstReactContent)).toBe(true)
 
     await page.getByRole('link', { name: 'Search', exact: true }).first().click()
-    await expect(page).toHaveURL(/\/search$/)
+    await expect(page).toHaveURL(/\/search(?:\?|$)/)
     await expect(page.locator('html')).toHaveClass(/dark/)
     await page.screenshot({ path: testInfo.outputPath('dark-desktop.png'), fullPage: true })
 

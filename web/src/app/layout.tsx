@@ -83,7 +83,7 @@ export function Layout() {
         <div
           className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90"
           style={{
-            background: 'radial-gradient(ellipse at 70% 20%, rgba(184,94,255,0.25) 0%, rgba(106,109,255,0.15) 40%, transparent 70%)',
+            background: 'radial-gradient(ellipse at 70% 20%, hsl(var(--glow-accent) / 0.12) 0%, hsl(var(--glow-primary) / 0.07) 40%, transparent 70%)',
             filter: 'blur(60px)',
           }}
         />
