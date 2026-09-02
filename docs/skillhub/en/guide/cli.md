@@ -157,7 +157,7 @@ skillhub install pdf-parser --agent codex --agent claude-code
 # Install to custom directory
 skillhub install pdf-parser --dir ~/.claude/skills
 
-# Force overwrite existing installation
+# Reinstall a SkillHub-managed installation from the same source
 skillhub install pdf-parser --force
 ```
 
@@ -214,14 +214,47 @@ For a custom path or an unsupported Agent directory, use `--dir` to specify the 
 
 ```json
 {
+  "schemaVersion": 1,
   "registry": "https://skill.xfyun.cn",
   "namespace": "global",
   "slug": "pdf-parser",
   "version": "1.0.0",
+  "versionId": 123,
+  "fingerprint": "sha256:...",
+  "files": { "SKILL.md": "sha256..." },
   "agent": "codex",
   "installedAt": "2026-04-28T06:00:00.000Z"
 }
 ```
+
+The CLI creates this file after extracting the registry package. It is not included in the downloaded
+ZIP, and `.skillhub/` is excluded when an installed directory is published again.
+
+## Upgrade Installed Skills
+
+```bash
+# Preview without changing files
+skillhub upgrade @global/skillhub-registry --check
+
+# Upgrade one or a bounded list of installed Skills
+skillhub upgrade @global/skillhub-registry
+skillhub upgrade @team/code-review @team/java-guide
+
+# Deterministic machine-readable plan
+skillhub upgrade @team/code-review --check --json
+```
+
+`upgrade` never installs a missing Skill and has no implicit upgrade-all mode. Local changes require
+`--force`; it only replaces a managed installation whose full `registry + namespace + slug` source
+matches.
+
+All targets in one inventory entry are upgraded together. A filter that selects only part of that
+entry is rejected because the current inventory format stores one shared version for all targets.
+The command also keeps the local files when the registry resolves to an older version.
+If a multi-Skill run fails after an earlier upgrade commits, execution stops and reports each item
+as `upgraded`, `failed`, or `not-attempted`; a committed upgrade is never rolled back implicitly.
+New installations store absolute target paths. Reinstall an older entry that still contains relative
+target paths before upgrading it; the CLI cannot safely infer the original working directory.
 
 ## Local Management
 
@@ -504,9 +537,24 @@ Options:
 - `--version <v>` — Version (default: latest)
 - `--agent <profile>` — Agent profile (repeatable)
 - `--dir <path>` — Custom installation directory (mutually exclusive with `--scope` and `--agent`)
-- `--force` — Overwrite existing installation
+- `--force` — Replace an existing SkillHub-managed installation from the same source
 - `--registry <url>` — Registry URL
 - `--token <token>` — API token
+- `--json` — JSON output
+
+### upgrade
+
+```bash
+skillhub upgrade <coordinate...> [options]
+```
+
+Options:
+- `--namespace <slug>` — Filter a bare slug by namespace
+- `--agent <profile>` — Filter installed targets by Agent (repeatable)
+- `--dir <path>` — Filter installed targets by directory
+- `--registry <url>` — Filter by installation source registry
+- `--check` — Print the exact plan without modifying files
+- `--force` — Replace local changes only for the same full source identity
 - `--json` — JSON output
 
 ### list
@@ -604,13 +652,16 @@ skillhub search test --registry https://skillhub.example.com
 ### Installation Directory Conflict
 
 ```bash
-# Use --force to overwrite
+# Reinstall only when the existing directory has matching SkillHub source metadata
 skillhub install pdf-parser --force
 
 # Or remove first then install
 skillhub remove pdf-parser
 skillhub install pdf-parser
 ```
+
+`--force` never overwrites an unmanaged directory or a Skill installed from another registry,
+namespace, or slug. Move or explicitly remove that directory first.
 
 ### Corrupted Inventory
 
