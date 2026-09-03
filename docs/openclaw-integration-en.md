@@ -16,7 +16,7 @@ Current compatibility boundaries:
 - ClawHub CLI `0.23.3` uses `/api/v1/whoami`, which matches the SkillHub compatibility API.
 - ClawHub publishing depends on upload-ticket endpoints that SkillHub does not implement, so `clawhub publish` and `clawhub sync` are not supported.
 - ClawHub CLI `0.23.3` does not reliably prioritize the private Registry saved during `login`; site discovery or the default can select another target. Set `CLAWHUB_REGISTRY` in each shell session or pass `--registry` explicitly.
-- Canonical slugs use `--` between namespace and skill. If either component itself contains `--`, the coordinate is ambiguous; use the first-party SkillHub CLI with its explicit `--namespace` option.
+- Canonical slugs use `--` between namespace and skill. SkillHub rejects new namespace or skill slugs containing consecutive `--`, keeping new coordinates unambiguous. Rename invalid legacy or externally imported coordinates before using the ClawHub CLI.
 
 ## Quick Start
 
@@ -127,7 +127,7 @@ npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 Notes:
 - Publishing requires an API Token with the `skill:publish` scope and permission in the target namespace.
 - `clawhub login` and the SkillHub CLI do not share credentials; set `SKILLHUB_TOKEN` separately for the first-party CLI.
-- The first-party CLI uses a separate namespace option and is not affected by canonical-slug delimiter ambiguity.
+- The first-party CLI uses a separate namespace option, but it still follows the server's slug validation rules.
 
 ## API Endpoints
 
@@ -189,7 +189,7 @@ SkillHub internally uses `@{namespace}/{skill}` format, but the compatibility la
 
 OpenClaw CLI uses canonical slug format, and SkillHub handles the conversion automatically.
 
-The canonical format has no escaping rule. A namespace or skill slug containing `--` can map to the same string as another coordinate; use the first-party SkillHub CLI for such coordinates.
+The canonical format has no escaping rule, so SkillHub rejects new namespace or skill slugs containing consecutive `--`. If legacy or externally imported data bypassed that validation, rename the coordinate first; the first-party CLI does not bypass server-side slug validation.
 
 ## Configuration Examples
 

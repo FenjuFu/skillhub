@@ -16,7 +16,7 @@ SkillHub 提供 ClawHub 兼容 API，覆盖常用的只读发现和安装流程�
 - 已验证的 ClawHub CLI `0.23.3` 使用 `/api/v1/whoami`，与 SkillHub 兼容层一致。
 - ClawHub CLI 的发布协议依赖 SkillHub 未实现的上传票据接口，因此 `clawhub publish` 和 `clawhub sync` 不属于支持范围。
 - ClawHub CLI `0.23.3` 不会可靠地优先使用登录时保存的私有 Registry；站点发现或默认地址可能覆盖预期目标。每个终端会话都应设置 `CLAWHUB_REGISTRY`，或在命令中显式传入 `--registry`。
-- canonical slug 使用 `--` 分隔 namespace 与 skill。坐标任一部分自身包含 `--` 时无法无歧义解析，请改用第一方 SkillHub CLI 的显式 `--namespace` 参数。
+- canonical slug 使用 `--` 分隔 namespace 与 skill。SkillHub 会拒绝新建包含连续 `--` 的 namespace 或 skill slug，以保证新坐标可无歧义解析；历史或外部导入的异常坐标应先重命名，再使用 ClawHub CLI。
 
 ## 快速开始
 
@@ -189,7 +189,7 @@ SkillHub 内部使用 `@{namespace}/{skill}` 格式，但兼容层会自动转�
 
 OpenClaw CLI 使用 canonical slug 格式，SkillHub 会自动处理转换。
 
-canonical 格式没有转义规则。namespace 或 skill slug 自身包含 `--` 时可能映射到相同字符串，必须改用第一方 SkillHub CLI。
+canonical 格式没有转义规则，因此 SkillHub 会拒绝新建包含连续 `--` 的 namespace 或 skill slug。若历史或外部导入数据绕过了该校验，应先重命名坐标；第一方 SkillHub CLI 虽使用独立 `--namespace` 参数，也不能绕过服务端 slug 校验。
 
 ## 配置示例
 
