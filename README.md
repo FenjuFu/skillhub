@@ -547,8 +547,9 @@ npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
 # Publishing uses the first-party SkillHub CLI
-SKILLHUB_REGISTRY=https://skillhub.your-company.com \
-  npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
+npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 `my-space--my-skill` is the canonical compat slug. SkillHub parses it as

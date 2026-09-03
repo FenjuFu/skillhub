@@ -432,8 +432,9 @@ npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
 # 发布请使用第一方 SkillHub CLI
-SKILLHUB_REGISTRY=https://skillhub.your-company.com \
-  npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
+npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 其中 `my-space--my-skill` 是兼容层使用的 canonical slug，SkillHub 会将其解析为
