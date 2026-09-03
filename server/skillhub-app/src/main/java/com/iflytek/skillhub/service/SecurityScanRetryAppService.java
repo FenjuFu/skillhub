@@ -56,19 +56,18 @@ public class SecurityScanRetryAppService {
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
         authorize(skill, userId, platformRoles, namespaceRoles);
 
-        SkillVersion observedVersion = skillVersionRepository.findById(versionId)
-                .filter(candidate -> candidate.getSkillId().equals(skillId))
+        SkillVersionStatus observedStatus = skillVersionRepository.findStatusByIdAndSkillId(versionId, skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionId));
-        if (observedVersion.getStatus() != SkillVersionStatus.SCAN_FAILED
-                && observedVersion.getStatus() != SkillVersionStatus.SCANNING) {
-            throw new DomainBadRequestException("error.security.scan.retry.status", observedVersion.getStatus());
+        if (observedStatus != SkillVersionStatus.SCAN_FAILED
+                && observedStatus != SkillVersionStatus.SCANNING) {
+            throw new DomainBadRequestException("error.security.scan.retry.status", observedStatus);
         }
         if (!securityScanService.isEnabled()) {
             throw new DomainBadRequestException("error.security.scan.retry.disabled");
         }
 
         String bundleKey = bundleKey(skillId, versionId);
-        if (observedVersion.getStatus() == SkillVersionStatus.SCAN_FAILED
+        if (observedStatus == SkillVersionStatus.SCAN_FAILED
                 && !objectStorageService.exists(bundleKey)) {
             throw new DomainBadRequestException("error.security.scan.retry.bundleMissing");
         }

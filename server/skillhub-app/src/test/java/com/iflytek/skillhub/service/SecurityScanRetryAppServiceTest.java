@@ -64,7 +64,8 @@ class SecurityScanRetryAppServiceTest {
 
     @Test
     void retry_asOwnerCreatesNewAttemptAndAuditLog() {
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findStatusByIdAndSkillId(42L, 8L))
+                .willReturn(Optional.of(SkillVersionStatus.SCAN_FAILED));
         given(skillVersionRepository.findByIdForUpdate(42L)).willReturn(Optional.of(version));
         given(securityScanService.isEnabled()).willReturn(true);
         given(objectStorageService.exists("packages/8/42/bundle.zip")).willReturn(true);
@@ -84,7 +85,8 @@ class SecurityScanRetryAppServiceTest {
 
     @Test
     void retry_allowsNamespaceAdminAndPlatformSecurityAdmin() {
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findStatusByIdAndSkillId(42L, 8L))
+                .willReturn(Optional.of(SkillVersionStatus.SCAN_FAILED));
         given(skillVersionRepository.findByIdForUpdate(42L)).willReturn(Optional.of(version));
         given(securityScanService.isEnabled()).willReturn(true);
         given(objectStorageService.exists("packages/8/42/bundle.zip")).willReturn(true);
@@ -107,13 +109,14 @@ class SecurityScanRetryAppServiceTest {
                 .isInstanceOf(DomainForbiddenException.class);
 
         verify(skillVersionRepository, never()).findByIdForUpdate(any());
-        verify(skillVersionRepository, never()).findById(any());
+        verify(skillVersionRepository, never()).findStatusByIdAndSkillId(any(), any());
     }
 
     @Test
     void retry_rejectsNonFailedVersion() {
         version.setStatus(SkillVersionStatus.PENDING_REVIEW);
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findStatusByIdAndSkillId(42L, 8L))
+                .willReturn(Optional.of(SkillVersionStatus.PENDING_REVIEW));
 
         assertThatThrownBy(() -> service.retry(
                 8L, 42L, "owner-1", Set.of(), Map.of(), new AuditRequestContext(null, null)))
@@ -125,7 +128,8 @@ class SecurityScanRetryAppServiceTest {
 
     @Test
     void retry_rejectsMissingStoredBundle() {
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findStatusByIdAndSkillId(42L, 8L))
+                .willReturn(Optional.of(SkillVersionStatus.SCAN_FAILED));
         given(securityScanService.isEnabled()).willReturn(true);
 
         assertThatThrownBy(() -> service.retry(
@@ -139,7 +143,8 @@ class SecurityScanRetryAppServiceTest {
     @Test
     void retry_whenAttemptAlreadyStartedReturnsCurrentStateWithoutDuplicateTask() {
         version.setStatus(SkillVersionStatus.SCANNING);
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findStatusByIdAndSkillId(42L, 8L))
+                .willReturn(Optional.of(SkillVersionStatus.SCANNING));
         given(skillVersionRepository.findByIdForUpdate(42L)).willReturn(Optional.of(version));
         given(securityScanService.isEnabled()).willReturn(true);
         given(securityAuditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
