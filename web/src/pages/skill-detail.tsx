@@ -202,6 +202,9 @@ export function SkillDetailPage() {
   const canManageSecurityScan = Boolean(skill && user && (
     skill.canManageLifecycle || hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   ))
+  const securityAuditVersion = ownerPreviewVersion?.status === 'SCAN_FAILED'
+    ? ownerPreviewVersion
+    : selectedVersionEntry
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
@@ -1259,11 +1262,11 @@ export function SkillDetailPage() {
           description={skill.summary}
         />
 
-        {canManageSecurityScan && selectedVersionEntry && (
+        {canManageSecurityScan && securityAuditVersion && (
           <SecurityAuditSummary
             skillId={skill.id}
-            versionId={selectedVersionEntry.id}
-            versionStatus={selectedVersionEntry.status}
+            versionId={securityAuditVersion.id}
+            versionStatus={securityAuditVersion.status}
             canRetry
           />
         )}

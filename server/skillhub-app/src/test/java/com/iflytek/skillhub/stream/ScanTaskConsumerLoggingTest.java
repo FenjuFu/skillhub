@@ -220,7 +220,10 @@ class ScanTaskConsumerLoggingTest {
         }
 
         @Override
-        public void processScanResult(Long versionId, ScannerType scannerType, SecurityScanResponse response) {
+        public void processScanResult(String taskId,
+                                      Long versionId,
+                                      ScannerType scannerType,
+                                      SecurityScanResponse response) {
         }
 
         @Override

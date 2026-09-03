@@ -274,10 +274,11 @@ class SecurityScanServiceTest {
 
     @Test
     void processScanResult_updatesAuditAndMovesVersionToPendingReview() {
-        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
         version.setStatus(SkillVersionStatus.SCANNING);
 
+        given(auditRepository.findByTaskId("task-current")).willReturn(Optional.of(audit));
         given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
                 .willReturn(Optional.of(audit));
         given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
@@ -300,7 +301,7 @@ class SecurityScanServiceTest {
                 1.25
         );
 
-        service.processScanResult(42L, ScannerType.SKILL_SCANNER, response);
+        service.processScanResult("task-current", 42L, ScannerType.SKILL_SCANNER, response);
 
         assertThat(audit.getScanId()).isEqualTo("scan-123");
         assertThat(audit.getVerdict()).isEqualTo(SecurityVerdict.DANGEROUS);
@@ -377,10 +378,11 @@ class SecurityScanServiceTest {
 
     @Test
     void processScanResult_shouldNotChangeStatusWhenVersionAlreadyPublished() {
-        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-published");
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
         version.setStatus(SkillVersionStatus.PUBLISHED);
 
+        given(auditRepository.findByTaskId("task-published")).willReturn(Optional.of(audit));
         given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
                 .willReturn(Optional.of(audit));
         given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
@@ -394,12 +396,36 @@ class SecurityScanServiceTest {
                 0.5
         );
 
-        service.processScanResult(42L, ScannerType.SKILL_SCANNER, response);
+        service.processScanResult("task-published", 42L, ScannerType.SKILL_SCANNER, response);
 
         assertThat(audit.getVerdict()).isEqualTo(SecurityVerdict.SAFE);
         assertThat(audit.getIsSafe()).isTrue();
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
         verify(skillVersionRepository).save(version);
+    }
+
+    @Test
+    void processScanResult_forStaleAttemptDoesNotCompleteCurrentAttempt() throws Exception {
+        SecurityAudit stale = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-stale");
+        SecurityAudit current = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-stale")).willReturn(Optional.of(stale));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(current));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        service.processScanResult(
+                "task-stale",
+                42L,
+                ScannerType.SKILL_SCANNER,
+                new SecurityScanResponse("scan-stale", SecurityVerdict.SAFE, 0, null, List.of(), 0.1)
+        );
+
+        assertThat(stale.getScanId()).isEqualTo("scan-stale");
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
+        verify(skillVersionRepository, never()).save(version);
     }
 
     private void setId(Object target, Long id) throws Exception {

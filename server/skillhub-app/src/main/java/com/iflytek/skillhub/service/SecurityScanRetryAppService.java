@@ -55,9 +55,26 @@ public class SecurityScanRetryAppService {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
         authorize(skill, userId, platformRoles, namespaceRoles);
-        SkillVersion version = skillVersionRepository.findBySkillIdForUpdate(skillId).stream()
-                .filter(candidate -> candidate.getId().equals(versionId))
-                .findFirst()
+
+        SkillVersion observedVersion = skillVersionRepository.findById(versionId)
+                .filter(candidate -> candidate.getSkillId().equals(skillId))
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionId));
+        if (observedVersion.getStatus() != SkillVersionStatus.SCAN_FAILED
+                && observedVersion.getStatus() != SkillVersionStatus.SCANNING) {
+            throw new DomainBadRequestException("error.security.scan.retry.status", observedVersion.getStatus());
+        }
+        if (!securityScanService.isEnabled()) {
+            throw new DomainBadRequestException("error.security.scan.retry.disabled");
+        }
+
+        String bundleKey = bundleKey(skillId, versionId);
+        if (observedVersion.getStatus() == SkillVersionStatus.SCAN_FAILED
+                && !objectStorageService.exists(bundleKey)) {
+            throw new DomainBadRequestException("error.security.scan.retry.bundleMissing");
+        }
+
+        SkillVersion version = skillVersionRepository.findByIdForUpdate(versionId)
+                .filter(candidate -> candidate.getSkillId().equals(skillId))
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionId));
 
         if (version.getStatus() == SkillVersionStatus.SCANNING && hasActiveAttempt(versionId)) {
@@ -65,14 +82,6 @@ public class SecurityScanRetryAppService {
         }
         if (version.getStatus() != SkillVersionStatus.SCAN_FAILED) {
             throw new DomainBadRequestException("error.security.scan.retry.status", version.getStatus());
-        }
-        if (!securityScanService.isEnabled()) {
-            throw new DomainBadRequestException("error.security.scan.retry.disabled");
-        }
-
-        String bundleKey = bundleKey(skillId, versionId);
-        if (!objectStorageService.exists(bundleKey)) {
-            throw new DomainBadRequestException("error.security.scan.retry.bundleMissing");
         }
 
         ScanTask task = securityScanService.retryStoredBundleScan(version, bundleKey, userId);

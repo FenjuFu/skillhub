@@ -22,6 +22,10 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface SkillVersionJpaRepository extends JpaRepository<SkillVersion, Long>, SkillVersionRepository {
+
+    @Override
+    @Query(value = "SELECT * FROM skill_version WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<SkillVersion> findByIdForUpdate(@Param("id") Long id);
     List<SkillVersion> findByIdIn(List<Long> ids);
     List<SkillVersion> findBySkillId(Long skillId);
     List<SkillVersion> findBySkillIdIn(List<Long> skillIds);

@@ -17,7 +17,6 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -65,7 +64,8 @@ class SecurityScanRetryAppServiceTest {
 
     @Test
     void retry_asOwnerCreatesNewAttemptAndAuditLog() {
-        given(skillVersionRepository.findBySkillIdForUpdate(8L)).willReturn(List.of(version));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findByIdForUpdate(42L)).willReturn(Optional.of(version));
         given(securityScanService.isEnabled()).willReturn(true);
         given(objectStorageService.exists("packages/8/42/bundle.zip")).willReturn(true);
         given(securityScanService.retryStoredBundleScan(version, "packages/8/42/bundle.zip", "owner-1"))
@@ -84,7 +84,8 @@ class SecurityScanRetryAppServiceTest {
 
     @Test
     void retry_allowsNamespaceAdminAndPlatformSecurityAdmin() {
-        given(skillVersionRepository.findBySkillIdForUpdate(8L)).willReturn(List.of(version));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findByIdForUpdate(42L)).willReturn(Optional.of(version));
         given(securityScanService.isEnabled()).willReturn(true);
         given(objectStorageService.exists("packages/8/42/bundle.zip")).willReturn(true);
         given(securityScanService.retryStoredBundleScan(any(), any(), any()))
@@ -105,24 +106,26 @@ class SecurityScanRetryAppServiceTest {
                 8L, 42L, "viewer", Set.of(), Map.of(), new AuditRequestContext(null, null)))
                 .isInstanceOf(DomainForbiddenException.class);
 
-        verify(skillVersionRepository, never()).findBySkillIdForUpdate(any());
+        verify(skillVersionRepository, never()).findByIdForUpdate(any());
+        verify(skillVersionRepository, never()).findById(any());
     }
 
     @Test
     void retry_rejectsNonFailedVersion() {
         version.setStatus(SkillVersionStatus.PENDING_REVIEW);
-        given(skillVersionRepository.findBySkillIdForUpdate(8L)).willReturn(List.of(version));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
 
         assertThatThrownBy(() -> service.retry(
                 8L, 42L, "owner-1", Set.of(), Map.of(), new AuditRequestContext(null, null)))
                 .isInstanceOf(DomainBadRequestException.class);
 
         verify(securityScanService, never()).retryStoredBundleScan(any(), any(), any());
+        verify(skillVersionRepository, never()).findByIdForUpdate(any());
     }
 
     @Test
     void retry_rejectsMissingStoredBundle() {
-        given(skillVersionRepository.findBySkillIdForUpdate(8L)).willReturn(List.of(version));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
         given(securityScanService.isEnabled()).willReturn(true);
 
         assertThatThrownBy(() -> service.retry(
@@ -130,12 +133,15 @@ class SecurityScanRetryAppServiceTest {
                 .isInstanceOf(DomainBadRequestException.class);
 
         verify(securityScanService, never()).retryStoredBundleScan(any(), any(), any());
+        verify(skillVersionRepository, never()).findByIdForUpdate(any());
     }
 
     @Test
     void retry_whenAttemptAlreadyStartedReturnsCurrentStateWithoutDuplicateTask() {
         version.setStatus(SkillVersionStatus.SCANNING);
-        given(skillVersionRepository.findBySkillIdForUpdate(8L)).willReturn(List.of(version));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findByIdForUpdate(42L)).willReturn(Optional.of(version));
+        given(securityScanService.isEnabled()).willReturn(true);
         given(securityAuditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
                 .willReturn(Optional.of(new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-existing")));
 

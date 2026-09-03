@@ -168,10 +168,15 @@ public class SecurityScanService {
     }
 
     @Transactional
-    public void processScanResult(Long versionId, ScannerType scannerType, SecurityScanResponse response) {
-        SecurityAudit audit = auditRepository.findLatestActiveByVersionIdAndScannerType(versionId, scannerType)
+    public void processScanResult(String taskId,
+                                  Long versionId,
+                                  ScannerType scannerType,
+                                  SecurityScanResponse response) {
+        SecurityAudit audit = auditRepository.findByTaskId(taskId)
+                .filter(candidate -> candidate.getSkillVersionId().equals(versionId))
+                .filter(candidate -> candidate.getScannerType() == scannerType)
                 .orElseThrow(() -> new IllegalStateException(
-                        "SecurityAudit not found for versionId=" + versionId + ", scannerType=" + scannerType));
+                        "SecurityAudit not found for taskId=" + taskId));
         SkillVersion version = skillVersionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
 
@@ -185,15 +190,21 @@ public class SecurityScanService {
         audit.setScannedAt(Instant.now(Clock.systemUTC()));
         auditRepository.save(audit);
 
-        // Only transition from SCANNING — leave PUBLISHED/REJECTED/YANKED untouched
-        if (version.getStatus() == SkillVersionStatus.SCANNING) {
+        boolean currentAttempt = auditRepository
+                .findLatestActiveByVersionIdAndScannerType(versionId, scannerType)
+                .map(latest -> taskId.equals(latest.getTaskId()))
+                .orElse(false);
+        // A late result is retained on its own audit round but cannot complete a newer attempt.
+        if (currentAttempt && version.getStatus() == SkillVersionStatus.SCANNING) {
             if (version.getRequestedVisibility() == SkillVisibility.PRIVATE) {
                 version.setStatus(SkillVersionStatus.UPLOADED);
             } else {
                 version.setStatus(SkillVersionStatus.PENDING_REVIEW);
             }
         }
-        skillVersionRepository.save(version);
+        if (currentAttempt) {
+            skillVersionRepository.save(version);
+        }
     }
 
     private Path saveTempDirectory(Long versionId, List<PackageEntry> entries) {

@@ -8,6 +8,9 @@ import java.util.Optional;
  */
 public interface SkillVersionRepository {
     Optional<SkillVersion> findById(Long id);
+    default Optional<SkillVersion> findByIdForUpdate(Long id) {
+        return findById(id);
+    }
     List<SkillVersion> findByIdIn(List<Long> ids);
     List<SkillVersion> findBySkillIdIn(List<Long> skillIds);
     List<SkillVersion> findBySkillIdInAndStatus(List<Long> skillIds, SkillVersionStatus status);
