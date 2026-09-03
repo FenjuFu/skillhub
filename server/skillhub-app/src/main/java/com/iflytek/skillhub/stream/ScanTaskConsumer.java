@@ -130,6 +130,15 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     }
 
     @Override
+    protected String finalFailureReason(ScanTaskPayload payload, Exception error, int retryCount) {
+        if (isScannerUnavailable(error) && hasUnavailableRecoveryExpired(payload)) {
+            return "Security scanner did not recover before the configured timeout. "
+                    + "Retry after scanner availability is restored.";
+        }
+        return super.finalFailureReason(payload, error, retryCount);
+    }
+
+    @Override
     protected void markDeferred(ScanTaskPayload payload, Exception error) {
         cleanupRetryTempPath(payload);
         log.warn("Scanner unavailable; keeping task pending for later recovery: taskId={}, versionId={}, "
@@ -247,16 +256,13 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                 maxUnavailableAge,
                 error);
         try {
-            skillVersionRepository.findById(payload.versionId())
-                    .filter(version -> version.getStatus() == SkillVersionStatus.SCANNING)
-                    .ifPresent(version -> {
-                        version.setStatus(SkillVersionStatus.SCAN_FAILED);
-                        skillVersionRepository.save(version);
-                    });
+            securityScanService.processScanFailure(
+                    payload.taskId(), payload.versionId(), payload.scannerType(), error);
         } finally {
             cleanupTempPath(payload.cleanupPath());
         }
     }
+
 
     @Override
     protected void retryMessage(ScanTaskPayload payload, int retryCount) {

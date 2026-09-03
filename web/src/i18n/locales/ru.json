@@ -1619,6 +1619,7 @@
     "scanDuration": "{{seconds}} с",
     "statusScanning": "Сканирование",
     "statusScanFailed": "Сканирование не удалось",
+    "failureReason": "Причина: {{reason}}",
     "remediation": "Рекомендации",
     "viewDetails": "Подробности",
     "verdict": {

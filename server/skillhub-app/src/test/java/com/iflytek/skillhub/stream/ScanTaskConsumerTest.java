@@ -98,17 +98,13 @@ class ScanTaskConsumerTest {
     }
 
     @Test
-    void markFailed_setsScanFailedWithoutChangingReviewTaskAndCleansTempFile() throws Exception {
-        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
-        setField(version, "id", 42L);
-        version.setStatus(SkillVersionStatus.SCANNING);
-
-        InMemorySkillVersionRepository skillVersionRepository = new InMemorySkillVersionRepository(version);
+    void markFailed_recordsExactAttemptAndCleansTempFile() throws Exception {
+        StubSecurityScanService securityScanService = new StubSecurityScanService();
         InMemoryReviewTaskRepository reviewTaskRepository = new InMemoryReviewTaskRepository();
         TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
                 new StubSecurityScanner(),
-                new StubSecurityScanService(),
-                skillVersionRepository,
+                securityScanService,
+                new InMemorySkillVersionRepository(),
                 new InMemoryScanTaskProducer(),
                 new InMemoryObjectStorageService()
         );
@@ -124,7 +120,8 @@ class ScanTaskConsumerTest {
 
         consumer.invokeMarkFailed(payload, "scan failed");
 
-        assertThat(skillVersionRepository.savedVersion.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        assertThat(securityScanService.failedTaskId).isEqualTo("task-2");
+        assertThat(securityScanService.failedVersionId).isEqualTo(42L);
         assertThat(reviewTaskRepository.savedTask).isNull();
         assertThat(reviewTaskRepository.deletedTask).isNull();
         assertThat(Files.exists(tempFile)).isFalse();
@@ -219,9 +216,10 @@ class ScanTaskConsumerTest {
         securityScanner.failure = new IllegalStateException("scanner unavailable");
         InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
         InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository();
+        StubSecurityScanService scanService = new StubSecurityScanService();
         TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
                 securityScanner,
-                new StubSecurityScanService(),
+                scanService,
                 repository,
                 producer,
                 objectStorageService
@@ -386,9 +384,10 @@ class ScanTaskConsumerTest {
         }
         version.setStatus(SkillVersionStatus.SCANNING);
         InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        StubSecurityScanService scanService = new StubSecurityScanService();
         TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
                 securityScanner,
-                new StubSecurityScanService(),
+                scanService,
                 repository,
                 new InMemoryScanTaskProducer(),
                 new InMemoryObjectStorageService(),
@@ -406,8 +405,8 @@ class ScanTaskConsumerTest {
                 "scannerType", ScannerType.SKILL_SCANNER.getValue()
         ));
 
-        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
-        assertThat(repository.savedVersion).isSameAs(version);
+        assertThat(scanService.failedTaskId).isEqualTo("task-expired-timeout");
+        assertThat(scanService.failedReason).contains("Retry after scanner availability is restored");
         verify(consumer.stream).ack("skillhub-scanners", messageId);
         verify(consumer.stream).remove(messageId);
     }
@@ -446,9 +445,10 @@ class ScanTaskConsumerTest {
         StubSecurityScanner securityScanner = unavailableScanner();
         SkillVersion version = scanningVersion(42L);
         InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        StubSecurityScanService scanService = new StubSecurityScanService();
         TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
                 securityScanner,
-                new StubSecurityScanService(),
+                scanService,
                 repository,
                 new InMemoryScanTaskProducer(),
                 new InMemoryObjectStorageService(),
@@ -467,7 +467,41 @@ class ScanTaskConsumerTest {
                 "scannerType", ScannerType.SKILL_SCANNER.getValue()
         ));
 
-        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        assertThat(scanService.failedTaskId).isEqualTo("task-malformed-timestamp");
+        verify(consumer.stream).remove(messageId);
+    }
+
+    @Test
+    void handleMessage_whenFailureWasRecordedButAckFails_redeliveryOnlyCompletesAck() {
+        StubSecurityScanner securityScanner = unavailableScanner();
+        StubSecurityScanService scanService = new StubSecurityScanService();
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                scanService,
+                new InMemorySkillVersionRepository(scanningVersion(42L)),
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService(),
+                Clock.fixed(Instant.parse("2026-09-03T08:00:00Z"), ZoneOffset.UTC),
+                Duration.ofHours(1)
+        );
+        StreamMessageId messageId = new StreamMessageId(15, 0);
+        Map<String, String> task = Map.of(
+                "taskId", "task-ack-recovery",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "createdAtMillis", String.valueOf(Instant.parse("2026-09-03T06:00:00Z").toEpochMilli()),
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        );
+        when(consumer.stream.ack("skillhub-scanners", messageId))
+                .thenThrow(new IllegalStateException("redis unavailable"))
+                .thenReturn(1L);
+
+        assertThatThrownBy(() -> consumer.handleMessage(messageId, task))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("redis unavailable");
+        consumer.handleMessage(messageId, task);
+
+        assertThat(securityScanner.invocations).isEqualTo(1);
         verify(consumer.stream).remove(messageId);
     }
 
@@ -644,9 +678,11 @@ class ScanTaskConsumerTest {
         private SecurityScanRequest lastRequest;
         private SecurityScanResponse response;
         private RuntimeException failure;
+        private int invocations;
 
         @Override
         public SecurityScanResponse scan(SecurityScanRequest request) {
+            invocations++;
             this.lastRequest = request;
             if (failure != null) {
                 throw failure;
@@ -669,6 +705,10 @@ class ScanTaskConsumerTest {
         private Long lastVersionId;
         private ScannerType lastScannerType;
         private SecurityScanResponse lastResponse;
+        private String failedTaskId;
+        private Long failedVersionId;
+        private String failedReason;
+        private boolean processed;
 
         private StubSecurityScanService() {
             super(null, null, task -> {
@@ -680,6 +720,19 @@ class ScanTaskConsumerTest {
             this.lastVersionId = versionId;
             this.lastScannerType = scannerType;
             this.lastResponse = response;
+        }
+
+        @Override
+        public void processScanFailure(String taskId, Long versionId, ScannerType scannerType, String reason) {
+            this.failedTaskId = taskId;
+            this.failedVersionId = versionId;
+            this.failedReason = reason;
+            this.processed = true;
+        }
+
+        @Override
+        public boolean isTaskAlreadyProcessed(String taskId) {
+            return processed && taskId.equals(failedTaskId);
         }
     }
 

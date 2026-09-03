@@ -253,9 +253,11 @@ public abstract class AbstractStreamConsumer<T> {
             retryMessage(payload, retryCount + 1);
             return;
         }
-        markFailed(payload, truncateError(
-                taskDisplayName() + " failed (retried " + retryCount + " times): " + e.getMessage()
-        ));
+        markFailed(payload, truncateError(finalFailureReason(payload, e, retryCount)));
+    }
+
+    protected String finalFailureReason(T payload, Exception error, int retryCount) {
+        return taskDisplayName() + " failed (retried " + retryCount + " times): " + error.getMessage();
     }
 
     protected int parseRetryCount(Map<String, String> data) {

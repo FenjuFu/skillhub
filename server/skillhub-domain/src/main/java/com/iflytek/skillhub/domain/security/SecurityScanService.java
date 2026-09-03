@@ -116,6 +116,33 @@ public class SecurityScanService {
     }
 
     @Transactional
+    public void processScanFailure(String taskId, Long versionId, ScannerType scannerType, String reason) {
+        SecurityAudit audit = auditRepository.findByTaskId(taskId)
+                .filter(candidate -> candidate.getSkillVersionId().equals(versionId))
+                .filter(candidate -> candidate.getScannerType() == scannerType)
+                .orElseThrow(() -> new IllegalStateException("SecurityAudit not found for taskId=" + taskId));
+        if (audit.getScannedAt() != null) {
+            return;
+        }
+        audit.markFailed(Instant.now(Clock.systemUTC()), reason);
+        auditRepository.save(audit);
+
+        boolean currentAttempt = auditRepository
+                .findLatestActiveByVersionIdAndScannerType(versionId, scannerType)
+                .map(latest -> taskId.equals(latest.getTaskId()))
+                .orElse(false);
+        if (!currentAttempt) {
+            return;
+        }
+        skillVersionRepository.findById(versionId)
+                .filter(version -> version.getStatus() == SkillVersionStatus.SCANNING)
+                .ifPresent(version -> {
+                    version.setStatus(SkillVersionStatus.SCAN_FAILED);
+                    skillVersionRepository.save(version);
+                });
+    }
+
+    @Transactional
     public void processScanResult(Long versionId, ScannerType scannerType, SecurityScanResponse response) {
         SecurityAudit audit = auditRepository.findLatestActiveByVersionIdAndScannerType(versionId, scannerType)
                 .orElseThrow(() -> new IllegalStateException(
