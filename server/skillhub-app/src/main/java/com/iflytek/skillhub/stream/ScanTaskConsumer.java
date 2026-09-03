@@ -131,11 +131,13 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
     @Override
     protected String finalFailureReason(ScanTaskPayload payload, Exception error, int retryCount) {
+        log.error("Security scan failed after retries: taskId={}, versionId={}, scanner={}, retryCount={}",
+                payload.taskId(), payload.versionId(), payload.scannerType(), retryCount, error);
         if (isScannerUnavailable(error) && hasUnavailableRecoveryExpired(payload)) {
             return "Security scanner did not recover before the configured timeout. "
                     + "Retry after scanner availability is restored.";
         }
-        return super.finalFailureReason(payload, error, retryCount);
+        return "Security scan failed after automatic retries. Retry the scan or contact an administrator.";
     }
 
     @Override

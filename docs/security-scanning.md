@@ -138,7 +138,7 @@ Response fields include:
 - scan task retries are handled by `AbstractStreamConsumer`
 - scanner connection failures, HTTP 429, and HTTP 5xx remain pending for automatic recovery
 - unavailable tasks older than `max-unavailable-age` are marked `SCAN_FAILED`, acknowledged, and removed from the Redis Stream
-- the timeout is evaluated on the pending reclaim cadence, so terminal handling can occur up to one `reclaim-interval` after the configured age
+- the timeout is evaluated during pending reclaim; terminal handling can occur roughly one `reclaim-min-idle` plus one `reclaim-interval` after the configured age
 - terminal failures retain a failure reason in the security audit response for operators and authorized users
 - other final failures mark the version as `SCAN_FAILED` after retry exhaustion
 - even after scan failure, a review task is still created so the package does not get stuck forever
