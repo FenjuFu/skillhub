@@ -256,9 +256,9 @@ ClawHub CLI `0.23.3` uses an upload-ticket protocol outside SkillHub's compatibi
 
 If the first-party CLI reports insufficient permission:
 
-- Publishing to global namespace (`@global`) requires `SUPER_ADMIN` permission
-- Publishing to team namespace requires OWNER or ADMIN role in that namespace
-- Contact your administrator for appropriate permissions
+- The publisher must be a member of the target namespace; `SUPER_ADMIN` is exempt
+- A regular member may submit a publication; visibility and review rules decide whether it is published immediately or enters review
+- Contact a namespace administrator to join the target namespace
 
 ### Q: Which OpenClaw versions are supported?
 

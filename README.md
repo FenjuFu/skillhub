@@ -515,8 +515,8 @@ Because SkillHub speaks the same `SKILL.md` format, skills from `anthropics/skil
 git clone https://github.com/anthropics/skills
 
 # ...and publish it into your private SkillHub registry
-export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-npx clawhub publish ./skills/<category>/<skill-name>
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+npx @astron-team/skillhub@latest publish ./skills/<category>/<skill-name>
 ```
 
 > ⚖️ **Licensing**: honor each skill's own license when republishing. Most skills in
@@ -546,15 +546,16 @@ npx clawhub search email
 npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
-# Publish to global namespace
-npx clawhub publish ./my-skill --slug my-skill --version 1.0.0
-
-# Publish to a team namespace such as my-space
-npx clawhub publish ./my-skill --slug my-space--my-skill --version 1.0.0
+# Publishing uses the first-party SkillHub CLI
+SKILLHUB_REGISTRY=https://skillhub.your-company.com \
+  npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 `my-space--my-skill` is the canonical compat slug. SkillHub parses it as
 namespace `my-space` plus skill slug `my-skill`.
+
+ClawHub compatibility covers search, inspection, and installation. Its publish
+protocol is not compatible with SkillHub; use the first-party CLI shown above.
 
 > 💡 **Tip**: The above commands are not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory (`--dir`). For example: `npx clawhub --dir ~/.claude/skills install my-skill`
 

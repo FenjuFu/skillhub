@@ -111,13 +111,15 @@ npx clawhub install team-name--my-skill
 
 ### Publish
 
-Prepare a skill package directory, then publish it:
+ClawHub's upload-ticket protocol is not compatible with SkillHub. Publish with
+the first-party SkillHub CLI instead:
 
 ```bash
-npx clawhub publish ./my-skill
+SKILLHUB_REGISTRY=${SKILLHUB_PUBLIC_BASE_URL} \
+  npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
 ```
 
-Publishing requires authentication and sufficient permissions in the target namespace.
+Publishing requires authentication and membership in the target namespace.
 
 ## Authentication And Visibility
 
