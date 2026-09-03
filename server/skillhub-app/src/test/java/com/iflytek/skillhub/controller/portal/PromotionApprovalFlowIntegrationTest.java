@@ -21,7 +21,7 @@ import com.iflytek.skillhub.infra.jpa.PromotionRequestJpaRepository;
 import com.iflytek.skillhub.infra.jpa.SkillJpaRepository;
 import com.iflytek.skillhub.infra.jpa.SkillVersionJpaRepository;
 import com.iflytek.skillhub.infra.jpa.UserAccountJpaRepository;
-import com.iflytek.skillhub.notification.service.NotificationDispatcher;
+import com.iflytek.skillhub.notification.service.NotificationService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -91,7 +91,7 @@ class PromotionApprovalFlowIntegrationTest {
     private GovernanceNotificationService governanceNotificationService;
 
     @MockBean
-    private NotificationDispatcher notificationDispatcher;
+    private NotificationService notificationService;
 
     @MockBean
     private AuditLogRepository auditLogRepository;
