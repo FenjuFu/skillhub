@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SkillCard } from '@/features/skill/skill-card'
 import { Pagination } from '@/shared/components/pagination'
@@ -14,7 +13,8 @@ export function MySubscriptionsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
-  const [page, setPage] = useState(0)
+  const search = useSearch({ from: '/dashboard/subscriptions' })
+  const page = search.page ?? 0
   const { data, isLoading } = useMySubscriptionsPage({ page, size: PAGE_SIZE })
   const skills = data?.items ?? []
   const totalPages = data ? Math.max(Math.ceil(data.total / data.size), 1) : 1
@@ -50,7 +50,14 @@ export function MySubscriptionsPage() {
             ))}
           </div>
           {data && data.total > PAGE_SIZE ? (
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={(nextPage) => navigate({
+                to: '/dashboard/subscriptions',
+                search: { page: nextPage > 0 ? nextPage : undefined },
+              })}
+            />
           ) : null}
         </>
       )}

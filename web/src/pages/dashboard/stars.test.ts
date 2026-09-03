@@ -5,9 +5,21 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigate = vi.fn()
+const { useMyStarsPage } = vi.hoisted(() => ({
+  useMyStarsPage: vi.fn(() => ({
+    data: {
+      items: [{ id: 1, namespace: 'team-a', slug: 'demo skill' }],
+      total: 1,
+      page: 0,
+      size: 12,
+    },
+    isLoading: false,
+  })),
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
+  useSearch: () => ({ page: 2 }),
   useLocation: () => ({
     pathname: '/dashboard/stars',
     searchStr: '?page=2',
@@ -34,15 +46,7 @@ vi.mock('@/shared/components/pagination', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-user-queries', () => ({
-  useMyStarsPage: () => ({
-    data: {
-      items: [{ id: 1, namespace: 'team-a', slug: 'demo skill' }],
-      total: 1,
-      page: 0,
-      size: 12,
-    },
-    isLoading: false,
-  }),
+  useMyStarsPage,
 }))
 
 vi.mock('@/shared/ui/card', () => ({
@@ -71,5 +75,11 @@ describe('MyStarsPage', () => {
       to: '/space/team-a/demo%20skill',
       search: { returnTo: '/dashboard/stars?page=2#saved' },
     })
+  })
+
+  it('uses the URL page as the query source', () => {
+    render(createElement(MyStarsPage))
+
+    expect(useMyStarsPage).toHaveBeenCalledWith({ page: 2, size: 12 })
   })
 })
