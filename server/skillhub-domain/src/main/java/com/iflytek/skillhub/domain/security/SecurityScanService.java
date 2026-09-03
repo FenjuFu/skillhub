@@ -70,6 +70,27 @@ public class SecurityScanService {
     }
 
     @Transactional
+    public ScanTask retryStoredBundleScan(SkillVersion version, String bundleKey, String publisherId) {
+        if (!enabled) {
+            throw new IllegalStateException("Security scanner is disabled");
+        }
+        if (version.getStatus() != SkillVersionStatus.SCAN_FAILED) {
+            throw new IllegalStateException("Only SCAN_FAILED versions can be retried");
+        }
+        ScanTask scanTask = new ScanTask(
+                UUID.randomUUID().toString(),
+                version.getId(),
+                null,
+                bundleKey,
+                publisherId,
+                System.currentTimeMillis(),
+                Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
+        );
+        persistScanAttempt(version, scanTask);
+        return scanTask;
+    }
+
+    @Transactional
     public void triggerScan(Long versionId, List<PackageEntry> entries, String publisherId) {
         if (!enabled) {
             log.debug("Security scanner disabled, skipping trigger for versionId={}", versionId);
@@ -87,7 +108,6 @@ public class SecurityScanService {
         } else {
             packagePath = saveTempDirectory(versionId, entries).toString();
         }
-        // Always create a new audit record — supports multiple rounds per version
         final ScanTask scanTask = new ScanTask(
                 UUID.randomUUID().toString(),
                 versionId,
@@ -97,7 +117,12 @@ public class SecurityScanService {
                 System.currentTimeMillis(),
                 Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
         );
-        auditRepository.save(new SecurityAudit(versionId, ScannerType.SKILL_SCANNER, scanTask.taskId()));
+        persistScanAttempt(version, scanTask);
+    }
+
+    private void persistScanAttempt(SkillVersion version, ScanTask scanTask) {
+        // A new record preserves prior scan history while identifying this attempt independently.
+        auditRepository.save(new SecurityAudit(version.getId(), ScannerType.SKILL_SCANNER, scanTask.taskId()));
         if (scanTaskOutboxRepository != null) {
             scanTaskOutboxRepository.save(new ScanTaskOutbox(scanTask));
         } else {

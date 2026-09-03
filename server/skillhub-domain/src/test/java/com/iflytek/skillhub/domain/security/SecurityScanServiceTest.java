@@ -137,6 +137,50 @@ class SecurityScanServiceTest {
     }
 
     @Test
+    void retryStoredBundleScan_createsFreshAuditAndDurableOutbox() throws Exception {
+        ScanTaskOutboxRepository outboxRepository = org.mockito.Mockito.mock(ScanTaskOutboxRepository.class);
+        service = new SecurityScanService(
+                auditRepository,
+                skillVersionRepository,
+                scanTaskProducer,
+                new ObjectMapper(),
+                "local",
+                true,
+                outboxRepository
+        );
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "owner-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCAN_FAILED);
+
+        ScanTask task = service.retryStoredBundleScan(version, "packages/8/42/bundle.zip", "owner-1");
+
+        ArgumentCaptor<SecurityAudit> auditCaptor = ArgumentCaptor.forClass(SecurityAudit.class);
+        ArgumentCaptor<ScanTaskOutbox> outboxCaptor = ArgumentCaptor.forClass(ScanTaskOutbox.class);
+        verify(auditRepository).save(auditCaptor.capture());
+        verify(outboxRepository).save(outboxCaptor.capture());
+        verify(scanTaskProducer, never()).publishScanTask(any());
+        verify(skillVersionRepository).save(version);
+        assertThat(auditCaptor.getValue().getTaskId()).isEqualTo(task.taskId());
+        assertThat(outboxCaptor.getValue().toScanTask()).isEqualTo(task);
+        assertThat(task.bundleKey()).isEqualTo("packages/8/42/bundle.zip");
+        assertThat(task.metadata()).containsEntry("scannerType", "skill-scanner");
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
+    }
+
+    @Test
+    void retryStoredBundleScan_rejectsNonFailedVersion() throws Exception {
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "owner-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCANNING);
+
+        assertThatThrownBy(() -> service.retryStoredBundleScan(version, "bundle.zip", "owner-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SCAN_FAILED");
+
+        verify(auditRepository, never()).save(any());
+    }
+
+    @Test
     void triggerScan_defersTaskPublishingUntilTransactionCommit() throws Exception {
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
         setId(version, 42L);

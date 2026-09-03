@@ -1589,6 +1589,10 @@
     "statusScanning": "Scanning",
     "statusScanFailed": "Scan Failed",
     "failureReason": "Reason: {{reason}}",
+    "retry": "Retry scan",
+    "retrying": "Retrying...",
+    "retrySuccess": "Security scan restarted",
+    "retryError": "Could not retry security scan",
     "remediation": "Remediation",
     "viewDetails": "View Details",
     "verdict": {

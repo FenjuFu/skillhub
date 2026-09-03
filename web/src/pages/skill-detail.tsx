@@ -199,6 +199,9 @@ export function SkillDetailPage() {
   const canReport = skill?.canReport ?? true
   const canHardDeleteSkill = Boolean(skill && user && (skill.ownerId === user.userId || hasRole('SUPER_ADMIN')))
   const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
+  const canManageSecurityScan = Boolean(skill && user && (
+    skill.canManageLifecycle || hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
+  ))
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
@@ -1256,8 +1259,13 @@ export function SkillDetailPage() {
           description={skill.summary}
         />
 
-        {skill.canManageLifecycle && selectedVersionEntry && (
-          <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} versionStatus={selectedVersionEntry.status} />
+        {canManageSecurityScan && selectedVersionEntry && (
+          <SecurityAuditSummary
+            skillId={skill.id}
+            versionId={selectedVersionEntry.id}
+            versionStatus={selectedVersionEntry.status}
+            canRetry
+          />
         )}
 
         <SkillLabelPanel

@@ -34,9 +34,11 @@ function createAudit(overrides: Partial<SecurityAuditRecord> = {}): SecurityAudi
 }
 
 let mockAudits: SecurityAuditRecord[] | undefined = undefined
+const retryMutation = { mutate: vi.fn(), isPending: false }
 
 vi.mock('./use-security-audit', () => ({
   useSecurityAudits: () => ({ data: mockAudits }),
+  useRetrySecurityScan: () => retryMutation,
 }))
 
 // Mock the Dialog components to avoid Radix UI portal / context issues in static render
@@ -114,6 +116,20 @@ describe('SecurityAuditSummary', () => {
 
     expect(html).toContain('securityAudit.statusScanFailed')
     expect(html).not.toContain('securityAudit.statusScanning')
+  })
+
+  it('renders retry only for an authorized failed version', () => {
+    mockAudits = [createAudit({ scannedAt: null })]
+
+    const failedHtml = renderToStaticMarkup(
+      <SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" canRetry />
+    )
+    const unauthorizedHtml = renderToStaticMarkup(
+      <SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" />
+    )
+
+    expect(failedHtml).toContain('securityAudit.retry')
+    expect(unauthorizedHtml).not.toContain('securityAudit.retry')
   })
 
   it('renders the total findings count across all audits', () => {

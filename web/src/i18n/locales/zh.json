@@ -1588,6 +1588,10 @@
     "statusScanning": "扫描中",
     "statusScanFailed": "扫描失败",
     "failureReason": "失败原因：{{reason}}",
+    "retry": "重新扫描",
+    "retrying": "正在重新扫描...",
+    "retrySuccess": "已重新发起安全扫描",
+    "retryError": "重新扫描失败",
     "remediation": "修复建议",
     "viewDetails": "查看详情",
     "verdict": {
