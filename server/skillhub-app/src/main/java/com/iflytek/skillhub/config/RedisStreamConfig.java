@@ -8,12 +8,13 @@ import com.iflytek.skillhub.observability.MessageObservationSupport;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import com.iflytek.skillhub.stream.RedissonScanTaskProducer;
 import com.iflytek.skillhub.stream.ScanTaskConsumer;
+import java.time.Clock;
+import java.time.Duration;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import java.time.Duration;
 
 @Configuration
 @ConditionalOnProperty(prefix = "skillhub.security.scanner", name = "enabled", havingValue = "true")
@@ -40,6 +41,9 @@ public class RedisStreamConfig {
     @Value("${skillhub.security.scanner.retry-max-attempts:3}")
     private int maxRetryAttempts;
 
+    @Value("${skillhub.security.stream.max-unavailable-age:PT1H}")
+    private Duration maxUnavailableAge;
+
     @Bean
     public RedissonScanTaskProducer redisScanTaskProducer(
             RedissonClient redissonClient,
@@ -55,6 +59,7 @@ public class RedisStreamConfig {
                                              SkillVersionRepository skillVersionRepository,
                                              ScanTaskProducer scanTaskProducer,
                                              ObjectStorageService objectStorageService,
+                                             Clock clock,
                                              MessageObservationSupport messageObservationSupport) {
         return new ScanTaskConsumer(
                 redissonClient,
@@ -70,6 +75,8 @@ public class RedisStreamConfig {
                 reclaimBatchSize,
                 reclaimInterval,
                 maxRetryAttempts,
+                maxUnavailableAge,
+                clock,
                 messageObservationSupport
         );
     }

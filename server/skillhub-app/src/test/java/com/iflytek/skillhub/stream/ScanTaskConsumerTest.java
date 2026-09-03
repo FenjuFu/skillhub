@@ -33,8 +33,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -361,6 +363,7 @@ class ScanTaskConsumerTest {
                 "taskId", "task-timeout",
                 "versionId", "42",
                 "skillPath", "/tmp/skillhub-scans/42",
+                "createdAtMillis", String.valueOf(System.currentTimeMillis()),
                 "scannerType", ScannerType.SKILL_SCANNER.getValue()
         ));
 
@@ -388,7 +391,9 @@ class ScanTaskConsumerTest {
                 new StubSecurityScanService(),
                 repository,
                 new InMemoryScanTaskProducer(),
-                new InMemoryObjectStorageService()
+                new InMemoryObjectStorageService(),
+                Clock.fixed(Instant.parse("2026-09-03T08:00:00Z"), ZoneOffset.UTC),
+                Duration.ofHours(1)
         );
 
         StreamMessageId messageId = new StreamMessageId(13, 0);
@@ -397,13 +402,72 @@ class ScanTaskConsumerTest {
                 "taskId", "task-expired-timeout",
                 "versionId", "42",
                 "skillPath", "/tmp/skillhub-scans/42",
-                "createdAtMillis", "1",
+                "createdAtMillis", String.valueOf(Instant.parse("2026-09-03T06:59:59Z").toEpochMilli()),
                 "scannerType", ScannerType.SKILL_SCANNER.getValue()
         ));
 
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
         assertThat(repository.savedVersion).isSameAs(version);
         verify(consumer.stream).ack("skillhub-scanners", messageId);
+        verify(consumer.stream).remove(messageId);
+    }
+
+    @Test
+    void handleMessage_whenScannerUnavailableBeforeRecoveryDeadline_keepsDeliveryPending() {
+        StubSecurityScanner securityScanner = unavailableScanner();
+        SkillVersion version = scanningVersion(42L);
+        InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                repository,
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService(),
+                Clock.fixed(Instant.parse("2026-09-03T08:00:00Z"), ZoneOffset.UTC),
+                Duration.ofHours(1)
+        );
+
+        StreamMessageId messageId = new StreamMessageId(14, 0);
+        consumer.handleMessage(messageId, Map.of(
+                "taskId", "task-before-deadline",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "createdAtMillis", String.valueOf(Instant.parse("2026-09-03T07:00:01Z").toEpochMilli()),
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
+        assertThat(repository.savedVersion).isNull();
+        verify(consumer.stream, never()).ack("skillhub-scanners", messageId);
+    }
+
+    @Test
+    void handleMessage_whenTaskTimestampIsMalformed_usesRedisEntryTimeForExpiry() {
+        StubSecurityScanner securityScanner = unavailableScanner();
+        SkillVersion version = scanningVersion(42L);
+        InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                repository,
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService(),
+                Clock.fixed(Instant.parse("2026-09-03T08:00:00Z"), ZoneOffset.UTC),
+                Duration.ofHours(1)
+        );
+
+        StreamMessageId messageId = new StreamMessageId(
+                Instant.parse("2026-09-03T06:00:00Z").toEpochMilli(), 0);
+        when(consumer.stream.ack("skillhub-scanners", messageId)).thenReturn(1L);
+        consumer.handleMessage(messageId, Map.of(
+                "taskId", "task-malformed-timestamp",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "createdAtMillis", "not-a-number",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
         verify(consumer.stream).remove(messageId);
     }
 
@@ -427,6 +491,24 @@ class ScanTaskConsumerTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("scanner unavailable");
         verify(processingLock).unlock();
+    }
+
+    private StubSecurityScanner unavailableScanner() {
+        StubSecurityScanner scanner = new StubSecurityScanner();
+        scanner.failure = new SecurityScanException(
+                "scanner timed out", new HttpClientException("request timed out", new java.util.concurrent.TimeoutException()));
+        return scanner;
+    }
+
+    private SkillVersion scanningVersion(Long id) {
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        try {
+            setField(version, "id", id);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+        version.setStatus(SkillVersionStatus.SCANNING);
+        return version;
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
@@ -468,6 +550,35 @@ class ScanTaskConsumerTest {
                     skillVersionRepository,
                     scanTaskProducer,
                     objectStorageService,
+                    new MessageObservationSupport(ObservationRegistry.NOOP, new RequestIdAccessor())
+            );
+            this.stream = mock(RStream.class);
+        }
+
+        @SuppressWarnings("unchecked")
+        private TestableScanTaskConsumer(SecurityScanner securityScanner,
+                                         SecurityScanService securityScanService,
+                                         SkillVersionRepository skillVersionRepository,
+                                         ScanTaskProducer scanTaskProducer,
+                                         ObjectStorageService objectStorageService,
+                                         Clock clock,
+                                         Duration maxUnavailableAge) {
+            super(
+                    redissonClient(availableProcessingLock()),
+                    "skillhub:scan:requests",
+                    "skillhub-scanners",
+                    securityScanner,
+                    securityScanService,
+                    skillVersionRepository,
+                    scanTaskProducer,
+                    objectStorageService,
+                    true,
+                    Duration.ofMinutes(16),
+                    20,
+                    Duration.ofSeconds(30),
+                    3,
+                    maxUnavailableAge,
+                    clock,
                     new MessageObservationSupport(ObservationRegistry.NOOP, new RequestIdAccessor())
             );
             this.stream = mock(RStream.class);
