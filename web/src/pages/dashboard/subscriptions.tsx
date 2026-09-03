@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SkillCard } from '@/features/skill/skill-card'
 import { Pagination } from '@/shared/components/pagination'
 import { useMySubscriptionsPage } from '@/shared/hooks/use-user-queries'
 import { Card } from '@/shared/ui/card'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { buildReturnTo } from '@/shared/lib/auth-route'
 
 const PAGE_SIZE = 12
 
 export function MySubscriptionsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const [page, setPage] = useState(0)
   const { data, isLoading } = useMySubscriptionsPage({ page, size: PAGE_SIZE })
   const skills = data?.items ?? []
@@ -40,7 +42,10 @@ export function MySubscriptionsPage() {
               <SkillCard
                 key={skill.id}
                 skill={skill}
-                onClick={() => navigate({ to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}` })}
+                onClick={() => navigate({
+                  to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}`,
+                  search: { returnTo: buildReturnTo(location) },
+                })}
               />
             ))}
           </div>
