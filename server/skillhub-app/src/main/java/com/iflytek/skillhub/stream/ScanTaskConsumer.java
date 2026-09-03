@@ -232,7 +232,8 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         SecurityScanRequest request = new SecurityScanRequest(
                 payload.taskId(), payload.versionId(), skillPath, Map.of());
         SecurityScanResponse response = securityScanner.scan(request);
-        securityScanService.processScanResult(payload.versionId(), payload.scannerType(), response);
+        securityScanService.processScanResult(
+                payload.taskId(), payload.versionId(), payload.scannerType(), response);
     }
 
     private static final class ConcurrentScanInProgressException extends RuntimeException {

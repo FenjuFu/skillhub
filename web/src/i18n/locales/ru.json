@@ -1620,6 +1620,10 @@
     "statusScanning": "Сканирование",
     "statusScanFailed": "Сканирование не удалось",
     "failureReason": "Причина: {{reason}}",
+    "retry": "Повторить сканирование",
+    "retrying": "Повторное сканирование...",
+    "retrySuccess": "Сканирование запущено повторно",
+    "retryError": "Не удалось повторить сканирование",
     "remediation": "Рекомендации",
     "viewDetails": "Подробности",
     "verdict": {

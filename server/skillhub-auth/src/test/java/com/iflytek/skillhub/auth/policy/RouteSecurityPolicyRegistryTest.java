@@ -65,6 +65,18 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizeApiToken_requiresPublishScopeForSecurityScanRetry() {
+        var denied = registry.authorizeApiToken(
+                "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:read"));
+        var allowed = registry.authorizeApiToken(
+                "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:publish"));
+
+        assertFalse(denied.allowed());
+        assertEquals("skill:publish", denied.requiredScope());
+        assertTrue(allowed.allowed());
+    }
+
+    @Test
     void authorizeApiToken_requiresDeleteScopeForHardDeleteEndpoint() {
         var denied = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:publish"));
         var allowed = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:delete"));

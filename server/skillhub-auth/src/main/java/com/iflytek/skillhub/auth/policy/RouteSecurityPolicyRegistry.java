@@ -144,6 +144,7 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.require(HttpMethod.DELETE, "/api/v1/skills/*/*", "skill:delete"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/publish", "skill:publish"),
+            ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/versions/*/security-audit/retry", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/publish", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/publish", "skill:publish"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/auth/whoami"),
