@@ -26,6 +26,7 @@ function createAudit(overrides: Partial<SecurityAuditRecord> = {}): SecurityAudi
     findingsCount: 0,
     findings: [],
     scanDurationSeconds: null,
+    failureReason: null,
     scannedAt: '2026-03-20T10:00:00Z',
     createdAt: '2026-03-20T10:00:00Z',
     ...overrides,

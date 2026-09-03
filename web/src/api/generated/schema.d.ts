@@ -5309,6 +5309,7 @@ export interface components {
             findings?: components["schemas"]["SecurityFinding"][];
             /** Format: double */
             scanDurationSeconds?: number;
+            failureReason?: string;
             /** Format: date-time */
             scannedAt?: string;
             /** Format: date-time */

@@ -1588,6 +1588,7 @@
     "scanDuration": "{{seconds}}s",
     "statusScanning": "Scanning",
     "statusScanFailed": "Scan Failed",
+    "failureReason": "Reason: {{reason}}",
     "remediation": "Remediation",
     "viewDetails": "View Details",
     "verdict": {

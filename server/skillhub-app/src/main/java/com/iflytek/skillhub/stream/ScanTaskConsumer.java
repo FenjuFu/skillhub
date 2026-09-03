@@ -21,12 +21,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 
 public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.ScanTaskPayload> {
     private static final Path SCAN_TEMP_DIR = Paths.get("/tmp/skillhub-scans").toAbsolutePath().normalize();
+    private static final Duration DEFAULT_MAX_UNAVAILABLE_AGE = Duration.ofHours(1);
+    private static final Duration MAX_CLOCK_SKEW = Duration.ofMinutes(5);
 
     private final RedissonClient redissonClient;
     private final SecurityScanner securityScanner;
@@ -35,6 +41,8 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     private final ScanTaskProducer scanTaskProducer;
     private final ObjectStorageService objectStorageService;
     private final int maxRetryAttempts;
+    private final Duration maxUnavailableAge;
+    private final Clock clock;
 
     public ScanTaskConsumer(RedissonClient redissonClient,
                             String streamKey,
@@ -53,6 +61,8 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         this.scanTaskProducer = scanTaskProducer;
         this.objectStorageService = objectStorageService;
         this.maxRetryAttempts = 3;
+        this.maxUnavailableAge = DEFAULT_MAX_UNAVAILABLE_AGE;
+        this.clock = Clock.systemUTC();
     }
 
     public ScanTaskConsumer(RedissonClient redissonClient,
@@ -68,6 +78,8 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                             int reclaimBatchSize,
                             Duration reclaimInterval,
                             int maxRetryAttempts,
+                            Duration maxUnavailableAge,
+                            Clock clock,
                             MessageObservationSupport messageObservationSupport) {
         super(
                 redissonClient,
@@ -86,6 +98,11 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         this.scanTaskProducer = scanTaskProducer;
         this.objectStorageService = objectStorageService;
         this.maxRetryAttempts = maxRetryAttempts;
+        if (maxUnavailableAge == null || maxUnavailableAge.isZero() || maxUnavailableAge.isNegative()) {
+            throw new IllegalArgumentException("maxUnavailableAge must be positive");
+        }
+        this.maxUnavailableAge = maxUnavailableAge;
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     @Override
@@ -101,14 +118,34 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     @Override
     protected boolean shouldDeferFailure(ScanTaskPayload payload, Exception error) {
         return error instanceof ConcurrentScanInProgressException
-                || (error instanceof SecurityScanException scanError && scanError.isScannerUnavailable());
+                || (isScannerUnavailable(error) && !hasUnavailableRecoveryExpired(payload));
+    }
+
+    @Override
+    protected boolean shouldRetry(ScanTaskPayload payload, Exception error, int retryCount) {
+        if (isScannerUnavailable(error) && hasUnavailableRecoveryExpired(payload)) {
+            return false;
+        }
+        return super.shouldRetry(payload, error, retryCount);
+    }
+
+    @Override
+    protected String finalFailureReason(ScanTaskPayload payload, Exception error, int retryCount) {
+        log.error("Security scan failed after retries: taskId={}, versionId={}, scanner={}, retryCount={}",
+                payload.taskId(), payload.versionId(), payload.scannerType(), retryCount, error);
+        if (isScannerUnavailable(error) && hasUnavailableRecoveryExpired(payload)) {
+            return "Security scanner did not recover before the configured timeout. "
+                    + "Retry after scanner availability is restored.";
+        }
+        return "Security scan failed after automatic retries. Retry the scan or contact an administrator.";
     }
 
     @Override
     protected void markDeferred(ScanTaskPayload payload, Exception error) {
         cleanupRetryTempPath(payload);
-        log.warn("Scanner unavailable; keeping task pending for later recovery: taskId={}, versionId={}, reason={}",
-                payload.taskId(), payload.versionId(), error.getMessage());
+        log.warn("Scanner unavailable; keeping task pending for later recovery: taskId={}, versionId={}, "
+                        + "taskAge={}, maxUnavailableAge={}, reason={}",
+                payload.taskId(), payload.versionId(), taskAge(payload), maxUnavailableAge, error.getMessage());
     }
 
     @Override
@@ -136,7 +173,8 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                     blankToNull(data.get("skillPath")),
                     blankToNull(data.get("bundleKey")),
                     scannerType,
-                    parseRetryCount(data)
+                    parseRetryCount(data),
+                    parseCreatedAtMillis(messageId, data.get("createdAtMillis"))
             );
         } catch (NumberFormatException e) {
             return null;
@@ -210,23 +248,23 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
     @Override
     protected void markFailed(ScanTaskPayload payload, String error) {
-        log.error("Security scan task failed permanently: taskId={}, versionId={}, scanner={}, source={}, error={}",
+        log.error("Security scan task failed permanently: taskId={}, versionId={}, scanner={}, source={}, "
+                        + "taskAge={}, maxUnavailableAge={}, error={}",
                 payload.taskId(),
                 payload.versionId(),
                 payload.scannerType(),
                 payload.sourceDescription(),
+                taskAge(payload),
+                maxUnavailableAge,
                 error);
         try {
-            skillVersionRepository.findById(payload.versionId())
-                    .filter(version -> version.getStatus() == SkillVersionStatus.SCANNING)
-                    .ifPresent(version -> {
-                        version.setStatus(SkillVersionStatus.SCAN_FAILED);
-                        skillVersionRepository.save(version);
-                    });
+            securityScanService.processScanFailure(
+                    payload.taskId(), payload.versionId(), payload.scannerType(), error);
         } finally {
             cleanupTempPath(payload.cleanupPath());
         }
     }
+
 
     @Override
     protected void retryMessage(ScanTaskPayload payload, int retryCount) {
@@ -315,6 +353,55 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         return value == null || value.isBlank() ? null : value;
     }
 
+    private boolean isScannerUnavailable(Exception error) {
+        return error instanceof SecurityScanException scanError && scanError.isScannerUnavailable();
+    }
+
+    private boolean hasUnavailableRecoveryExpired(ScanTaskPayload payload) {
+        Instant now = clock.instant();
+        long createdAtMillis = payload.createdAtMillis();
+        if (createdAtMillis <= 0 || createdAtMillis > now.plus(MAX_CLOCK_SKEW).toEpochMilli()) {
+            return true;
+        }
+        try {
+            return !Instant.ofEpochMilli(createdAtMillis).plus(maxUnavailableAge).isAfter(now);
+        } catch (DateTimeException | ArithmeticException ignored) {
+            return true;
+        }
+    }
+
+    private Duration taskAge(ScanTaskPayload payload) {
+        try {
+            Duration age = Duration.between(Instant.ofEpochMilli(payload.createdAtMillis()), clock.instant());
+            return age.isNegative() ? Duration.ZERO : age;
+        } catch (DateTimeException | ArithmeticException ignored) {
+            return maxUnavailableAge;
+        }
+    }
+
+    private long parseCreatedAtMillis(String messageId, String value) {
+        Long createdAt = parsePositiveLong(value);
+        if (createdAt != null) {
+            return createdAt;
+        }
+        int separator = messageId.indexOf('-');
+        String redisTimestamp = separator >= 0 ? messageId.substring(0, separator) : messageId;
+        Long fallback = parsePositiveLong(redisTimestamp);
+        return fallback != null ? fallback : 0L;
+    }
+
+    private Long parsePositiveLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            long parsed = Long.parseLong(value);
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
     protected static final class ScanTaskPayload {
         private final String taskId;
         private final Long versionId;
@@ -322,11 +409,12 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         private final String bundleKey;
         private final ScannerType scannerType;
         private final int retryCount;
+        private final long createdAtMillis;
         private String workingSkillPath;
         private boolean cleanupEnabled = true;
 
         protected ScanTaskPayload(String taskId, Long versionId, String skillPath, String bundleKey, ScannerType scannerType) {
-            this(taskId, versionId, skillPath, bundleKey, scannerType, 0);
+            this(taskId, versionId, skillPath, bundleKey, scannerType, 0, System.currentTimeMillis());
         }
 
         protected ScanTaskPayload(String taskId,
@@ -335,12 +423,23 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                                   String bundleKey,
                                   ScannerType scannerType,
                                   int retryCount) {
+            this(taskId, versionId, skillPath, bundleKey, scannerType, retryCount, System.currentTimeMillis());
+        }
+
+        protected ScanTaskPayload(String taskId,
+                                  Long versionId,
+                                  String skillPath,
+                                  String bundleKey,
+                                  ScannerType scannerType,
+                                  int retryCount,
+                                  long createdAtMillis) {
             this.taskId = taskId;
             this.versionId = versionId;
             this.skillPath = skillPath;
             this.bundleKey = bundleKey;
             this.scannerType = scannerType;
             this.retryCount = retryCount;
+            this.createdAtMillis = createdAtMillis;
         }
 
         protected String taskId() {
@@ -365,6 +464,10 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
         protected int retryCount() {
             return retryCount;
+        }
+
+        protected long createdAtMillis() {
+            return createdAtMillis;
         }
 
         protected void markWorkingSkillPath(String workingSkillPath) {

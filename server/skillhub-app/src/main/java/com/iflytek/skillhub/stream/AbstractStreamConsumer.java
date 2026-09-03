@@ -247,15 +247,17 @@ public abstract class AbstractStreamConsumer<T> {
     }
 
     private void handleFailure(T payload, int retryCount, Exception e) {
-        if (retryCount < maxRetryCount()) {
+        if (shouldRetry(payload, e, retryCount)) {
             // Retry publication remains inside the current consumer scope, so the new producer
             // span and message carrier continue the original trace.
             retryMessage(payload, retryCount + 1);
             return;
         }
-        markFailed(payload, truncateError(
-                taskDisplayName() + " failed (retried " + retryCount + " times): " + e.getMessage()
-        ));
+        markFailed(payload, truncateError(finalFailureReason(payload, e, retryCount)));
+    }
+
+    protected String finalFailureReason(T payload, Exception error, int retryCount) {
+        return taskDisplayName() + " failed (retried " + retryCount + " times): " + error.getMessage();
     }
 
     protected int parseRetryCount(Map<String, String> data) {
@@ -291,6 +293,10 @@ public abstract class AbstractStreamConsumer<T> {
 
     protected int maxRetryCount() {
         return DEFAULT_MAX_RETRY_COUNT;
+    }
+
+    protected boolean shouldRetry(T payload, Exception error, int retryCount) {
+        return retryCount < maxRetryCount();
     }
 
     protected boolean shouldDeferFailure(T payload, Exception error) {

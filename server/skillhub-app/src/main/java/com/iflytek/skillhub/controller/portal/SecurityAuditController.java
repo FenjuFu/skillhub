@@ -121,6 +121,7 @@ public class SecurityAuditController extends BaseApiController {
                 audit.getFindingsCount(),
                 deserializeFindings(audit.getFindings()),
                 audit.getScanDurationSeconds(),
+                audit.getFailureReason(),
                 audit.getScannedAt(),
                 audit.getCreatedAt()
         );

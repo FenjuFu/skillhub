@@ -1587,6 +1587,7 @@
     "scanDuration": "{{seconds}}s",
     "statusScanning": "扫描中",
     "statusScanFailed": "扫描失败",
+    "failureReason": "失败原因：{{reason}}",
     "remediation": "修复建议",
     "viewDetails": "查看详情",
     "verdict": {

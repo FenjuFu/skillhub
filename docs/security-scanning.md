@@ -49,6 +49,7 @@ skillhub:
       key: skillhub:scan:requests
       group: skillhub-scanners
       reclaim-min-idle: PT16M
+      max-unavailable-age: PT1H
 ```
 
 Important environment variables:
@@ -60,6 +61,7 @@ Important environment variables:
 - `SKILLHUB_SCAN_STREAM_KEY`
 - `SKILLHUB_SCAN_STREAM_GROUP`
 - `SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE`
+- `SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE`
 
 Scanner-side optional environment variables:
 
@@ -134,7 +136,11 @@ Response fields include:
 ## Failure Semantics
 
 - scan task retries are handled by `AbstractStreamConsumer`
-- final failure marks the version as `SCAN_FAILED`
+- scanner connection failures, HTTP 429, and HTTP 5xx remain pending for automatic recovery
+- unavailable tasks older than `max-unavailable-age` are marked `SCAN_FAILED`, acknowledged, and removed from the Redis Stream
+- the timeout is evaluated during pending reclaim; terminal handling can occur roughly one `reclaim-min-idle` plus one `reclaim-interval` after the configured age
+- terminal failures retain a failure reason in the security audit response for operators and authorized users
+- other final failures mark the version as `SCAN_FAILED` after retry exhaustion
 - even after scan failure, a review task is still created so the package does not get stuck forever
 
 This keeps the existing human review path intact while making scanner failures visible.

@@ -293,6 +293,45 @@ class SecurityScanServiceTest {
     }
 
     @Test
+    void processScanFailure_marksExactCurrentAttemptAndVersionFailed() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-current")).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        service.processScanFailure("task-current", 42L, ScannerType.SKILL_SCANNER, "scanner unavailable");
+
+        assertThat(audit.getScannedAt()).isNotNull();
+        assertThat(audit.getFailureReason()).isEqualTo("scanner unavailable");
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        verify(auditRepository).save(audit);
+        verify(skillVersionRepository).save(version);
+    }
+
+    @Test
+    void processScanFailure_forStaleAttemptDoesNotFailCurrentVersion() throws Exception {
+        SecurityAudit stale = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-stale");
+        SecurityAudit current = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-stale")).willReturn(Optional.of(stale));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(current));
+
+        service.processScanFailure("task-stale", 42L, ScannerType.SKILL_SCANNER, "stale failure");
+
+        assertThat(stale.getScannedAt()).isNotNull();
+        assertThat(stale.getFailureReason()).isEqualTo("stale failure");
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
+        verify(skillVersionRepository, never()).save(any());
+    }
+
+    @Test
     void processScanResult_shouldNotChangeStatusWhenVersionAlreadyPublished() {
         SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
