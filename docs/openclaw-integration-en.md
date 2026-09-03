@@ -118,12 +118,15 @@ npx clawhub list --help
 The ClawHub CLI `0.23.3` publishing protocol is not compatible with SkillHub. Use the first-party SkillHub CLI:
 
 ```bash
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
 npx @astron-team/skillhub@latest publish ./my-skill --namespace global
 npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 Notes:
 - Publishing requires an API Token with the `skill:publish` scope and permission in the target namespace.
+- `clawhub login` and the SkillHub CLI do not share credentials; set `SKILLHUB_TOKEN` separately for the first-party CLI.
 - The first-party CLI uses a separate namespace option and is not affected by canonical-slug delimiter ambiguity.
 
 ## API Endpoints

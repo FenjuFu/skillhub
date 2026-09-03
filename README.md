@@ -516,6 +516,7 @@ git clone https://github.com/anthropics/skills
 
 # ...and publish it into your private SkillHub registry
 export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
 npx @astron-team/skillhub@latest publish ./skills/<category>/<skill-name>
 ```
 

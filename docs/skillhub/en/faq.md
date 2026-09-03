@@ -66,7 +66,9 @@ npx clawhub search email
 npx clawhub install my-skill
 
 # Publish a skill package (the ClawHub CLI publishing protocol is not compatible)
-SKILLHUB_REGISTRY=http://your-skillhub-host:8080 npx @astron-team/skillhub@latest publish ./my-skill
+export SKILLHUB_REGISTRY=http://your-skillhub-host:8080
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
+npx @astron-team/skillhub@latest publish ./my-skill
 ```
 
 ## Q: How do I configure HTTPS?

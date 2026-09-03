@@ -59,6 +59,7 @@ Ensure skill package conforms to SkillHub specification:
 ```bash
 # Configure the SkillHub registry
 export SKILLHUB_REGISTRY=http://localhost:8080
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
 
 # Publish to default namespace
 npx @astron-team/skillhub@latest publish ./my-skill

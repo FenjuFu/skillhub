@@ -402,6 +402,7 @@ git clone https://github.com/anthropics/skills
 
 # ……并将其发布到你的私有 SkillHub 注册中心
 export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
 npx @astron-team/skillhub@latest publish ./skills/<分类>/<技能名>
 ```
 

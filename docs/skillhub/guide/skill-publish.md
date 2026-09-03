@@ -59,6 +59,7 @@ SkillHub 提供了类似 npm 的发布体验，但增加了企业级的权限控
 ```bash
 # 配置 SkillHub 注册中心
 export SKILLHUB_REGISTRY=http://localhost:8080
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
 
 # 发布到默认命名空间
 npx @astron-team/skillhub@latest publish ./my-skill
