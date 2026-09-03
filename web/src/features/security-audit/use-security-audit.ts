@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ApiError, fetchJson } from '@/api/client'
+import { ApiError, fetchJson, getCsrfHeaders } from '@/api/client'
 import type { SecurityAuditRecord } from './types'
 
 async function fetchSecurityAudits(
@@ -37,6 +37,7 @@ export function useRetrySecurityScan(skillId: number, versionId: number) {
   return useMutation({
     mutationFn: () => fetchJson(`/api/v1/skills/${skillId}/versions/${versionId}/security-audit/retry`, {
       method: 'POST',
+      headers: getCsrfHeaders(),
     }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['security-audits', skillId, versionId] })

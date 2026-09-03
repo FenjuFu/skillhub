@@ -232,6 +232,7 @@ class ScanTaskConsumerLoggingTest {
                                        ScannerType scannerType,
                                        String reason) {
         }
+
     }
 
     private static final class TestProducer implements ScanTaskProducer {
