@@ -127,7 +127,7 @@ npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 说明：
 - 发布需要具有 `skill:publish` scope 的 API Token，以及目标 namespace 对应权限。
 - `clawhub login` 与 SkillHub CLI 不共享凭据；请为第一方 CLI 单独设置 `SKILLHUB_TOKEN`。
-- 第一方 CLI 使用独立 namespace 参数，不受 canonical slug 分隔符歧义影响。
+- 第一方 CLI 使用独立 namespace 参数，但仍遵循服务端 slug 校验规则。
 
 ## API 端点说明
 
