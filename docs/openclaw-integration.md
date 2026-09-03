@@ -9,13 +9,13 @@ SkillHub 提供 ClawHub 兼容 API，覆盖常用的只读发现和安装流程�
 
 - 🔍 搜索组织内的私有技能
 - 📥 下载和安装技能包
-- ⭐ 收藏和评分技能
+- ⭐ 收藏技能
 
 当前兼容边界：
 
 - 已验证的 ClawHub CLI `0.23.3` 使用 `/api/v1/whoami`，与 SkillHub 兼容层一致。
 - ClawHub CLI 的发布协议依赖 SkillHub 未实现的上传票据接口，因此 `clawhub publish` 和 `clawhub sync` 不属于支持范围。
-- ClawHub CLI 不读取登录配置中保存的私有 Registry。每个终端会话都应设置 `CLAWHUB_REGISTRY`，或在命令中显式传入 `--registry`。
+- ClawHub CLI `0.23.3` 不会可靠地优先使用登录时保存的私有 Registry；站点发现或默认地址可能覆盖预期目标。每个终端会话都应设置 `CLAWHUB_REGISTRY`，或在命令中显式传入 `--registry`。
 - canonical slug 使用 `--` 分隔 namespace 与 skill。坐标任一部分自身包含 `--` 时无法无歧义解析，请改用第一方 SkillHub CLI 的显式 `--namespace` 参数。
 
 ## 快速开始
@@ -25,7 +25,7 @@ SkillHub 提供 ClawHub 兼容 API，覆盖常用的只读发现和安装流程�
 为当前终端会话设置 SkillHub 注册中心地址：
 
 ```bash
-# ClawHub CLI 不会从 login 配置中恢复该地址
+# 不依赖 login 配置的 Registry 解析顺序
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
@@ -138,8 +138,8 @@ SkillHub 兼容层提供以下端点：
 | `/api/v1/download/{slug}` | GET | 下载技能（重定向） | 可选* |
 | `/api/v1/download` | GET | 下载技能（查询参数） | 可选* |
 | `/api/v1/skills/{slug}` | GET | 获取技能详情 | 可选 |
-| `/api/v1/skills/{slug}/star` | POST | 收藏技能 | 必需 |
-| `/api/v1/skills/{slug}/unstar` | DELETE | 取消收藏 | 必需 |
+| `/api/v1/stars/{slug}` | POST | 收藏技能 | 必需 |
+| `/api/v1/stars/{slug}` | DELETE | 取消收藏 | 必需 |
 | `/api/v1/publish` | POST | 旧版兼容发布端点；ClawHub CLI `0.23.3` 不使用 | 必需 |
 
 说明：

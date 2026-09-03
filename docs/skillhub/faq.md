@@ -65,8 +65,8 @@ npx clawhub search email
 # 安装技能包
 npx clawhub install my-skill
 
-# 发布技能包
-npx clawhub publish ./my-skill
+# 发布技能包（ClawHub CLI 的发布协议不兼容 SkillHub）
+SKILLHUB_REGISTRY=http://your-skillhub-host:8080 npx @astron-team/skillhub@latest publish ./my-skill
 ```
 
 ## Q: 如何配置 HTTPS？

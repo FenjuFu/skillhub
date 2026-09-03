@@ -9,13 +9,13 @@ SkillHub provides a ClawHub-compatible API for common read and install flows. Wi
 
 - 🔍 Search for private skills within your organization
 - 📥 Download and install skill packages
-- ⭐ Star and rate skills
+- ⭐ Star skills
 
 Current compatibility boundaries:
 
 - ClawHub CLI `0.23.3` uses `/api/v1/whoami`, which matches the SkillHub compatibility API.
 - ClawHub publishing depends on upload-ticket endpoints that SkillHub does not implement, so `clawhub publish` and `clawhub sync` are not supported.
-- ClawHub does not restore a private Registry saved by `login`. Set `CLAWHUB_REGISTRY` in each shell session or pass `--registry` explicitly.
+- ClawHub CLI `0.23.3` does not reliably prioritize the private Registry saved during `login`; site discovery or the default can select another target. Set `CLAWHUB_REGISTRY` in each shell session or pass `--registry` explicitly.
 - Canonical slugs use `--` between namespace and skill. If either component itself contains `--`, the coordinate is ambiguous; use the first-party SkillHub CLI with its explicit `--namespace` option.
 
 ## Quick Start
@@ -25,7 +25,7 @@ Current compatibility boundaries:
 Set the SkillHub registry address for the current shell session:
 
 ```bash
-# ClawHub does not restore this value from its login configuration
+# Do not depend on the registry resolution order of the login configuration
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
@@ -138,8 +138,8 @@ SkillHub compatibility layer provides the following endpoints:
 | `/api/v1/download/{slug}` | GET | Download skill (redirect) | Optional* |
 | `/api/v1/download` | GET | Download skill (query params) | Optional* |
 | `/api/v1/skills/{slug}` | GET | Get skill details | Optional |
-| `/api/v1/skills/{slug}/star` | POST | Star a skill | Required |
-| `/api/v1/skills/{slug}/unstar` | DELETE | Unstar a skill | Required |
+| `/api/v1/stars/{slug}` | POST | Star a skill | Required |
+| `/api/v1/stars/{slug}` | DELETE | Unstar a skill | Required |
 | `/api/v1/publish` | POST | Legacy compatibility endpoint; not used by ClawHub CLI `0.23.3` | Required |
 
 Notes:

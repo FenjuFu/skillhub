@@ -57,15 +57,17 @@ Ensure skill package conforms to SkillHub specification:
 2. **Publish via CLI (Recommended)**
 
 ```bash
-# Configure registry
-export CLAWHUB_REGISTRY=http://localhost:8080
+# Configure the SkillHub registry
+export SKILLHUB_REGISTRY=http://localhost:8080
 
 # Publish to default namespace
-npx clawhub publish ./my-skill
+npx @astron-team/skillhub@latest publish ./my-skill
 
 # Publish to specific namespace
-npx clawhub publish ./my-skill --namespace my-team
+npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
 ```
+
+> The ClawHub CLI compatibility surface covers search, inspection, and installation only. Use the SkillHub CLI above for publishing.
 
 3. **Publish via Web UI**
 
