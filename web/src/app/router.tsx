@@ -393,6 +393,9 @@ const dashboardStarsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/stars',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { page?: number } => ({
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
   component: MyStarsPage,
 })
 
@@ -400,6 +403,9 @@ const dashboardSubscriptionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/subscriptions',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { page?: number } => ({
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
   component: MySubscriptionsPage,
 })
 
