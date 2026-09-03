@@ -51,9 +51,6 @@ test.describe('Light and dark theme', () => {
         }),
       })
     })
-    await page.route('**/api/web/notifications/sse', async (route) => {
-      await route.fulfill({ status: 204 })
-    })
     await page.route('**/api/web/me/stars?*', async (route) => {
       await route.fulfill({
         status: 200,

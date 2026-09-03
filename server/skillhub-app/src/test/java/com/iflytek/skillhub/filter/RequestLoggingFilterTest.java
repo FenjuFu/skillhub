@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -80,31 +79,6 @@ class RequestLoggingFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertThat(loggedMessages()).noneMatch(message -> message.contains("/actuator/health"));
-    }
-
-    @Test
-    void doFilterInternal_skipsOtherSseEndpointsWithoutWrappingResponse()
-            throws ServletException, IOException {
-        RequestLoggingFilter filter = new RequestLoggingFilter();
-        attachAppender();
-
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/web/scan/sse");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-
-        FilterChain filterChain = (req, res) -> {
-            assertThat(res).isSameAs(response);
-            res.setContentType("text/event-stream");
-            res.getWriter().write("event:connected\n");
-            res.getWriter().flush();
-        };
-
-        filter.doFilter(request, response, filterChain);
-
-        assertThat(response.getHeader("Content-Length")).isNull();
-        assertThat(response.getHeader("X-Accel-Buffering")).isNull();
-        assertThat(response.getHeader(HttpHeaders.CACHE_CONTROL)).isNull();
-        assertThat(response.getContentAsString()).isEqualTo("event:connected\n");
-        assertThat(loggedMessages()).noneMatch(message -> message.contains("/api/web/scan/sse"));
     }
 
     @Test
