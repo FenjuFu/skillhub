@@ -74,6 +74,10 @@ SkillHub 提供了丰富的社交功能，让团队成员可以互动、分享�
 3. 点击通知跳转到相关页面
 4. 标记为已读或全部已读
 
+通知列表和未读数每 10 秒通过普通 HTTP 请求刷新，并在窗口重新获得焦点时立即刷新。旧版
+`GET /api/v1/notifications/sse` 接口已移除；自建客户端应改为轮询
+`GET /api/v1/notifications` 和 `GET /api/v1/notifications/unread-count`。
+
 **查看我的收藏**：
 
 1. 访问 `/dashboard/stars`

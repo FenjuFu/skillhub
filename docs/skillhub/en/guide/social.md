@@ -74,6 +74,11 @@ View skill packages with the most stars and highest ratings to discover best pra
 3. Click a notification to navigate to the relevant page
 4. Mark as read or mark all as read
 
+The notification list and unread count refresh through ordinary HTTP requests every 10 seconds and
+immediately when the window regains focus. The legacy `GET /api/v1/notifications/sse` endpoint has
+been removed. Custom clients should poll `GET /api/v1/notifications` and
+`GET /api/v1/notifications/unread-count` instead.
+
 **Viewing My Stars**:
 
 1. Navigate to `/dashboard/stars`

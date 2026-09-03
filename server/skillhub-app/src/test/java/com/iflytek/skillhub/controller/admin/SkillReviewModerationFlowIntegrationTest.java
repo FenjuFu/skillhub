@@ -29,7 +29,7 @@ import com.iflytek.skillhub.infra.jpa.JpaSkillRatingRepository;
 import com.iflytek.skillhub.infra.jpa.NamespaceJpaRepository;
 import com.iflytek.skillhub.infra.jpa.SkillJpaRepository;
 import com.iflytek.skillhub.infra.jpa.UserAccountJpaRepository;
-import com.iflytek.skillhub.notification.service.NotificationDispatcher;
+import com.iflytek.skillhub.notification.service.NotificationService;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -67,7 +67,7 @@ class SkillReviewModerationFlowIntegrationTest {
     @MockBean private DeviceAuthService deviceAuthService;
     @MockBean private RbacService rbacService;
     @MockBean private GovernanceNotificationService governanceNotificationService;
-    @MockBean private NotificationDispatcher notificationDispatcher;
+    @MockBean private NotificationService notificationService;
 
     @Test
     void hideAndRestorePersistModerationStateAndAuditRows() throws Exception {

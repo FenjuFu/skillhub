@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { useUnreadCount } from './use-notifications'
-import { useNotificationSse } from './use-notification-sse'
 import { NotificationDropdown } from './notification-dropdown'
 
 export function resolveNotificationUserId(user?: { userId?: string } | null) {
@@ -11,7 +10,7 @@ export function resolveNotificationUserId(user?: { userId?: string } | null) {
 
 /**
  * Bell icon with unread badge. Toggles the notification dropdown on click.
- * SSE connection is established here at the authenticated user level.
+ * The unread count is refreshed through the notification HTTP polling module.
  */
 export function NotificationBell() {
   const { t } = useTranslation()
@@ -22,8 +21,6 @@ export function NotificationBell() {
   const notificationUserId = resolveNotificationUserId(user)
   const { data: unreadData } = useUnreadCount(notificationUserId)
   const unreadCount = unreadData?.count ?? 0
-
-  useNotificationSse(notificationUserId)
 
   // Close dropdown when clicking outside
   useEffect(() => {

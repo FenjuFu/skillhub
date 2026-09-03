@@ -4,7 +4,7 @@ import type { NotificationItem } from '@/api/types'
 import { getNotificationItems } from './notification-page'
 import { resolveNotificationDisplay } from './notification-content'
 import { useAuth } from '@/features/auth/use-auth'
-import { useNotifications, useMarkAllRead, useMarkRead } from './use-notifications'
+import { useNotificationList, useMarkAllRead, useMarkRead } from './use-notifications'
 import { resolveNotificationTarget } from './notification-target'
 import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 
@@ -18,7 +18,7 @@ interface Props {
 export function NotificationDropdown({ onClose }: Props) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
-  const { data, isLoading } = useNotifications(user?.userId, 0, 5)
+  const { data, isLoading } = useNotificationList(user?.userId, 0, 5)
   const markAllRead = useMarkAllRead(user?.userId)
   const markRead = useMarkRead(user?.userId)
 

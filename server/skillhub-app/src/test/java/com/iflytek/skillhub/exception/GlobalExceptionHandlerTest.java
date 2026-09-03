@@ -99,19 +99,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAsyncRequestTimeout_shouldReturnNoContentForSseRequests() {
-        when(request.getRequestURI()).thenReturn("/api/v1/notifications/sse");
-
-        ResponseEntity<?> response = handler.handleAsyncRequestTimeout(new AsyncRequestTimeoutException(), request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(response.getBody()).isNull();
-    }
-
-    @Test
-    void handleAsyncRequestTimeout_shouldReturnApiEnvelopeForNonSseRequests() {
+    void handleAsyncRequestTimeout_shouldReturnApiEnvelope() {
         attachAppender();
-        when(request.getRequestURI()).thenReturn("/api/v1/publish");
         when(request.getMethod()).thenReturn("POST");
         when(sensitiveLogSanitizer.sanitizeRequestTarget(request)).thenReturn("/api/v1/publish");
 

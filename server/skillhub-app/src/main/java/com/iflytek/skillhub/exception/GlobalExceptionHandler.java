@@ -187,12 +187,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AsyncRequestTimeoutException.class)
     public ResponseEntity<?> handleAsyncRequestTimeout(AsyncRequestTimeoutException ex, HttpServletRequest request) {
-        String path = request.getRequestURI();
-        if (path != null && path.endsWith("/sse")) {
-            logger.debug("SSE timeout [requestId={}, path={}]", requestIdAccessor.current(), path);
-            return ResponseEntity.noContent().build();
-        }
-
         logHandledException(HttpStatus.REQUEST_TIMEOUT, "error.request.timeout", request);
         return ResponseEntity.status(HttpStatus.REQUEST_TIMEOUT).body(
                 apiResponseFactory.error(408, "error.request.timeout"));
