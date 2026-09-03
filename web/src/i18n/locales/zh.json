@@ -375,7 +375,6 @@
     "statusHidden": "已隐藏",
     "statusScanning": "安全扫描中",
     "statusScanFailed": "扫描失败",
-    "failureReason": "失败原因：{{reason}}",
     "archiveConfirmTitle": "确认归档技能",
     "archiveConfirmDescription": "归档后普通用户将无法看到或下载“{{skill}}”，确定继续吗？",
     "unarchiveConfirmTitle": "确认恢复技能",
@@ -1588,6 +1587,7 @@
     "scanDuration": "{{seconds}}s",
     "statusScanning": "扫描中",
     "statusScanFailed": "扫描失败",
+    "failureReason": "失败原因：{{reason}}",
     "remediation": "修复建议",
     "viewDetails": "查看详情",
     "verdict": {

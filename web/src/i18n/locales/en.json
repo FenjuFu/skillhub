@@ -375,7 +375,6 @@
     "statusHidden": "Hidden",
     "statusScanning": "Scanning",
     "statusScanFailed": "Scan Failed",
-    "failureReason": "Reason: {{reason}}",
     "archiveConfirmTitle": "Archive skill",
     "archiveConfirmDescription": "After archiving, regular users will no longer be able to view or download \"{{skill}}\". Continue?",
     "unarchiveConfirmTitle": "Restore skill",
@@ -1589,6 +1588,7 @@
     "scanDuration": "{{seconds}}s",
     "statusScanning": "Scanning",
     "statusScanFailed": "Scan Failed",
+    "failureReason": "Reason: {{reason}}",
     "remediation": "Remediation",
     "viewDetails": "View Details",
     "verdict": {
