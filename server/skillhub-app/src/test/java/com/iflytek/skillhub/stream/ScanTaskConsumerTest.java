@@ -371,6 +371,43 @@ class ScanTaskConsumerTest {
     }
 
     @Test
+    void handleMessage_whenScannerRemainsUnavailablePastRecoveryWindow_failsAndRemovesDelivery() {
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        securityScanner.failure = new SecurityScanException(
+                "scanner timed out", new HttpClientException("request timed out", new java.util.concurrent.TimeoutException()));
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        try {
+            setField(version, "id", 42L);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+        version.setStatus(SkillVersionStatus.SCANNING);
+        InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                repository,
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        StreamMessageId messageId = new StreamMessageId(13, 0);
+        when(consumer.stream.ack("skillhub-scanners", messageId)).thenReturn(1L);
+        consumer.handleMessage(messageId, Map.of(
+                "taskId", "task-expired-timeout",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "createdAtMillis", "1",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        assertThat(repository.savedVersion).isSameAs(version);
+        verify(consumer.stream).ack("skillhub-scanners", messageId);
+        verify(consumer.stream).remove(messageId);
+    }
+
+    @Test
     void processBusiness_whenScannerFails_releasesProcessingLock() {
         StubSecurityScanner securityScanner = new StubSecurityScanner();
         securityScanner.failure = new IllegalStateException("scanner unavailable");
