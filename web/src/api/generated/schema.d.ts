@@ -1268,6 +1268,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/skills/{skillId}/versions/{versionId}/security-audit/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retrySecurityScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/skills/{canonicalSlug}/undelete": {
         parameters: {
             query?: never;
@@ -8513,6 +8529,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ClawHubPublishResponse"];
+                };
+            };
+        };
+    };
+    retrySecurityScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+                versionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
                 };
             };
         };
