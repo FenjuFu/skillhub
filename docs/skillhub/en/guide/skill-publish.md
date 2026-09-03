@@ -68,7 +68,7 @@ npx @astron-team/skillhub@latest publish ./my-skill
 npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
 ```
 
-> The ClawHub CLI compatibility surface covers search, inspection, and installation only. Use the SkillHub CLI above for publishing.
+> The ClawHub CLI publish and sync protocols are not compatible with SkillHub. Use the SkillHub CLI above for publishing.
 
 3. **Publish via Web UI**
 

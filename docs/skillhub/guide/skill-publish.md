@@ -68,7 +68,7 @@ npx @astron-team/skillhub@latest publish ./my-skill
 npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
 ```
 
-> ClawHub CLI 仅用于兼容搜索、查看和安装；其发布协议与 SkillHub 不兼容。发布请使用上面的 SkillHub CLI。
+> ClawHub CLI 的发布与同步协议与 SkillHub 不兼容。发布请使用上面的 SkillHub CLI。
 
 3. **使用 Web UI 发布**
 
