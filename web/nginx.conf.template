@@ -75,6 +75,7 @@ server {
 
     location = /registry/skill.md {
         default_type text/plain;
+        include /etc/nginx/skillhub-guide-public-url*.conf;
         sub_filter_types text/plain;
         sub_filter_once off;
         sub_filter '__SKILLHUB_PUBLIC_BASE_URL__' '$proxy_x_forwarded_proto://$http_host$skillhub_forwarded_prefix';
@@ -86,6 +87,7 @@ server {
 
     location = /install/skillhub.md {
         default_type text/plain;
+        include /etc/nginx/skillhub-guide-public-url*.conf;
         sub_filter_types text/plain;
         sub_filter_once off;
         sub_filter '__SKILLHUB_PUBLIC_BASE_URL__' '$proxy_x_forwarded_proto://$http_host$skillhub_forwarded_prefix';
