@@ -21,7 +21,10 @@ envsubst '${SKILLHUB_WEB_API_BASE_URL} ${SKILLHUB_PUBLIC_BASE_URL} ${SKILLHUB_WE
   < /usr/share/nginx/html/runtime-config.js.template \
   > /usr/share/nginx/html/runtime-config.js
 
-# Generate registry/skill.md with actual public URL
+# Generate both the preferred install guide and the compatibility route from
+# one template so self-hosted deployments keep their own registry URL.
+mkdir -p /usr/share/nginx/html/install
 envsubst '${SKILLHUB_PUBLIC_BASE_URL}' \
   < /usr/share/nginx/html/registry/skill.md.template \
   > /usr/share/nginx/html/registry/skill.md
+cp /usr/share/nginx/html/registry/skill.md /usr/share/nginx/html/install/skillhub.md

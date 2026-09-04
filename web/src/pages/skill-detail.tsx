@@ -1266,6 +1266,7 @@ export function SkillDetailPage() {
         <InstallForAgentButton
           namespace={namespace}
           slug={slug}
+          version={selectedVersionEntry?.version ?? publishedVersion?.version ?? ''}
           disabled={!selectedVersionEntry || skill.status === 'ARCHIVED' || !isVersionDownloadable}
         />
 

@@ -122,12 +122,12 @@
       },
       "agent": {
         "description": "Send a prompt to your Agent to set up the SkillHub Registry",
-        "command": "Read https://www.example.com/registry/skill.md and follow the instructions to setup SkillHub Skills Registry",
-        "commandTemplate": "Read {{url}} and follow the instructions to setup SkillHub Skills Registry"
+        "command": "Connect SkillHub using https://www.example.com/install/skillhub.md",
+        "commandTemplate": "Connect SkillHub using {{url}}"
       },
       "human": {
-        "description": "Use the CLI tool to install Skills",
-        "command": "npx clawhub search <keyword>"
+        "description": "Use the SkillHub CLI to search for and install Skills",
+        "command": "npx @astron-team/skillhub@latest search <keyword>"
       },
       "steps": {
         "configureEnv": {
@@ -872,6 +872,7 @@
     "install": "Install",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
+    "installCommandUnsafeVersion": "This version cannot be represented safely in a cross-platform command. Ask the publisher to correct it.",
     "download": "Download",
     "labelsSectionTitle": "Labels",
     "labelsSectionDescription": "Attach or remove recommended labels that help users filter and discover this skill.",
@@ -1049,7 +1050,7 @@
     "installForAgent": {
       "button": "Install for Agent",
       "copied": "Agent prompt copied",
-      "prompt": "Please follow the [SkillHub skill installation guide]({{guideUrl}}) to install and use {{skill}}."
+      "prompt": "Follow {{guideUrl}} to connect SkillHub and install {{skill}} version {{version}}. If SkillHub is unavailable or has no match, search configured public fallback registries; before installing a candidate from another source, explain its source, version, and risks and ask for my confirmation."
     }
   },
   "skillCompare": {

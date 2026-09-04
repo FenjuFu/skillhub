@@ -72,7 +72,7 @@ export function LandingQuickStartSection() {
   // Build dynamic agent command with actual registry URL
   const agentCommand = t('landing.quickStart.agent.commandTemplate', {
     defaultValue: t('landing.quickStart.agent.command'),
-    url: `${baseUrl}/registry/skill.md`,
+    url: `${baseUrl}/install/skillhub.md`,
   })
 
   const tabs: LandingQuickStartTab[] = [

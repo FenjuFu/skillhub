@@ -122,12 +122,12 @@
       },
       "agent": {
         "description": "Отправьте промпт своему Agent, чтобы настроить SkillHub Registry",
-        "command": "Прочитайте https://www.example.com/registry/skill.md и следуйте инструкциям для настройки SkillHub Skills Registry",
-        "commandTemplate": "Прочитайте {{url}} и следуйте инструкциям для настройки SkillHub Skills Registry"
+        "command": "Подключите SkillHub по инструкции https://www.example.com/install/skillhub.md",
+        "commandTemplate": "Подключите SkillHub по инструкции {{url}}"
       },
       "human": {
-        "description": "Используйте CLI для установки Skills",
-        "command": "npx clawhub search <keyword>"
+        "description": "Используйте SkillHub CLI для поиска и установки Skills",
+        "command": "npx @astron-team/skillhub@latest search <keyword>"
       },
       "steps": {
         "configureEnv": {
@@ -937,6 +937,7 @@
     "install": "Установить",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
+    "installCommandUnsafeVersion": "Номер этой версии нельзя безопасно использовать в кроссплатформенной команде. Попросите автора исправить его.",
     "download": "Скачать",
     "labelsSectionTitle": "Метки",
     "labelsSectionDescription": "Прикрепите или удалите рекомендуемые метки, которые помогают пользователям фильтровать и находить этот скилл.",
@@ -1114,7 +1115,7 @@
     "installForAgent": {
       "button": "Установить для агента",
       "copied": "Инструкция скопирована",
-      "prompt": "Следуйте [инструкции SkillHub по установке скиллов]({{guideUrl}}), чтобы установить и использовать {{skill}}."
+      "prompt": "Следуйте инструкции {{guideUrl}}, чтобы подключить SkillHub и установить {{skill}} версии {{version}}. Если SkillHub недоступен или ничего не найдено, выполните поиск в настроенных резервных публичных реестрах; перед установкой кандидата из другого источника объясните его источник, версию и риски и запросите моё подтверждение."
     }
   },
   "skillCompare": {

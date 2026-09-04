@@ -1,29 +1,31 @@
 import { Bot, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
-import { getBaseUrl } from './install-command'
+import { buildSkillhubCoordinate, getBaseUrl, isPortableSkillVersion } from './install-command'
 
 interface InstallForAgentButtonProps {
   namespace: string
   slug: string
+  version: string
   disabled?: boolean
 }
 
-type FormatAgentPrompt = (guideUrl: string, skill: string) => string
+type FormatAgentPrompt = (guideUrl: string, skill: string, version: string) => string
 
 export function buildAgentInstallPrompt(
   namespace: string,
   slug: string,
+  version: string,
   baseUrl: string,
   formatPrompt: FormatAgentPrompt,
 ): string {
-  const skill = namespace === 'global' ? slug : `@${namespace}/${slug}`
-  const guideUrl = `${baseUrl.replace(/\/+$/, '')}/registry/skill.md`
+  const skill = buildSkillhubCoordinate(namespace, slug)
+  const guideUrl = `${baseUrl.replace(/\/+$/, '')}/install/skillhub.md`
 
-  return formatPrompt(guideUrl, skill)
+  return formatPrompt(guideUrl, skill, version)
 }
 
-export function InstallForAgentButton({ namespace, slug, disabled = false }: InstallForAgentButtonProps) {
+export function InstallForAgentButton({ namespace, slug, version, disabled = false }: InstallForAgentButtonProps) {
   const { t } = useTranslation()
   const [copied, copy] = useCopyToClipboard()
 
@@ -32,8 +34,13 @@ export function InstallForAgentButton({ namespace, slug, disabled = false }: Ins
       await copy(buildAgentInstallPrompt(
         namespace,
         slug,
+        version,
         getBaseUrl(),
-        (guideUrl, skill) => t('skillDetail.installForAgent.prompt', { guideUrl, skill }),
+        (guideUrl, skill, selectedVersion) => t('skillDetail.installForAgent.prompt', {
+          guideUrl,
+          skill,
+          version: selectedVersion,
+        }),
       ))
     } catch (err) {
       console.error('Failed to copy agent installation prompt:', err)
@@ -49,7 +56,7 @@ export function InstallForAgentButton({ namespace, slug, disabled = false }: Ins
       type="button"
       data-testid="install-for-agent-button"
       onClick={handleCopy}
-      disabled={disabled}
+      disabled={disabled || !isPortableSkillVersion(version)}
       aria-label={label}
       className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/50 px-4 py-3 transition-colors hover:bg-muted/70 active:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
     >

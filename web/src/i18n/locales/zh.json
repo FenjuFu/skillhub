@@ -122,12 +122,12 @@
       },
       "agent": {
         "description": "发送提示词给你的 Agent，以设置SkillHub Registry",
-        "command": "阅读 https://www.example.com/registry/skill.md，并按照说明完成 SkillHub Skills Registry 的配置",
-        "commandTemplate": "阅读 {{url}}，并按照说明完成 SkillHub Skills Registry 的配置"
+        "command": "请根据 https://www.example.com/install/skillhub.md 接入 SkillHub",
+        "commandTemplate": "请根据 {{url}} 接入 SkillHub"
       },
       "human": {
-        "description": "使用CLI工具安装Skills",
-        "command": "npx clawhub search <keyword>"
+        "description": "使用 SkillHub CLI 搜索和安装技能",
+        "command": "npx @astron-team/skillhub@latest search <keyword>"
       },
       "steps": {
         "configureEnv": {
@@ -872,6 +872,7 @@
     "install": "安装",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
+    "installCommandUnsafeVersion": "该版本号无法安全地生成跨平台命令，请联系发布者修正版本号。",
     "download": "下载",
     "labelsSectionTitle": "标签管理",
     "labelsSectionDescription": "为这个技能挂载或移除推荐标签，帮助用户筛选和发现。",
@@ -1047,9 +1048,9 @@
       "defaultDescription": "实用技能"
     },
     "installForAgent": {
-      "button": "为 Agent 安装",
+      "button": "安装到 Agent",
       "copied": "安装指令已复制",
-      "prompt": "请根据 [SkillHub 技能安装指南]({{guideUrl}})，安装并使用 {{skill}}。"
+      "prompt": "请根据 {{guideUrl}} 接入 SkillHub，并安装 {{skill}} 的 {{version}} 版本。SkillHub 不可用或无匹配结果时，请查询备用公共技能源；安装其他来源的候选技能前，先说明来源、版本和风险并征得我的确认。"
     }
   },
   "skillCompare": {

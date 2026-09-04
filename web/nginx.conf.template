@@ -75,6 +75,15 @@ server {
 
     location = /registry/skill.md {
         default_type text/plain;
+        add_header Cache-Control "no-cache";
+        add_header Content-Disposition "inline";
+        add_header X-Content-Type-Options "nosniff";
+        try_files $uri =404;
+    }
+
+    location = /install/skillhub.md {
+        default_type text/plain;
+        add_header Cache-Control "no-cache";
         add_header Content-Disposition "inline";
         add_header X-Content-Type-Options "nosniff";
         try_files $uri =404;
