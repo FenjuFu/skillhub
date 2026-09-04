@@ -47,10 +47,15 @@ export async function syncPullCommand(options: SyncPullOptions): Promise<string>
   const output = renderPullResult(result, Boolean(options.json), Boolean(options.check))
   if (result.failures.length > 0) {
     process.stdout.write(`${output}\n`)
-    throw new CliError('namespace sync completed with failures', EXIT.generic, {
-      namespace: context.namespace,
-      failures: result.failures
-    })
+    const blocked = result.entries.filter(entry => entry.status === 'blocked')
+    throw new CliError(
+      blocked.length > 0 ? 'namespace sync blocked by remote version safety checks' : 'namespace sync completed with failures',
+      blocked.length > 0 ? EXIT.validation : EXIT.generic,
+      {
+        namespace: context.namespace,
+        failures: result.failures
+      }
+    )
   }
   return output
 }
@@ -135,7 +140,7 @@ async function resolveSyncContext(options: SyncCommonOptions): Promise<{
   return { client: new SkillHubClient(registry, token), registry, token, namespace, rootDir }
 }
 
-function renderPullResult(result: PullResult, json: boolean, check: boolean): string {
+export function renderPullResult(result: PullResult, json: boolean, check: boolean): string {
   if (json) {
     return JSON.stringify({ ok: result.failures.length === 0, check, ...result })
   }
@@ -145,6 +150,7 @@ function renderPullResult(result: PullResult, json: boolean, check: boolean): st
     ...result.entries
       .filter(entry => !result.actions.some(action => action.slug === entry.slug))
       .map(entry => `${entry.status.padEnd(16)} ${entry.slug}`),
+    ...result.warnings.map(item => `warning    ${item.slug}: ${item.message}`),
     ...result.failures.map(item => `failed     ${item.slug}: ${item.message}`)
   ]
   return lines.join('\n')

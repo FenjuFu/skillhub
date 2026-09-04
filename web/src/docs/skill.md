@@ -1,13 +1,13 @@
 ---
 name: skillhub-registry
-description: Use this when you need to search, inspect, install, or publish agent skills against a SkillHub registry. SkillHub is a skill registry with a ClawHub-compatible API layer, so prefer the `clawhub` CLI for registry operations instead of making raw HTTP calls.
+description: Use this when you need to search, inspect, install, or publish agent skills against a SkillHub registry. Use ClawHub for compatible read/install workflows and the first-party SkillHub CLI for publishing.
 ---
 
 # SkillHub Registry
 
 Use this skill when you need to work with a SkillHub registry: search skills, inspect metadata, install a package, or publish a new version.
 
-> Important: Prefer the `clawhub` CLI for registry workflows. SkillHub exposes a ClawHub-compatible API surface and a discovery endpoint at `/.well-known/clawhub.json`, so the CLI is the safest path for auth, resolution, and download behavior. Only fall back to raw HTTP when debugging the server itself.
+> Important: Use `clawhub` for search, inspection, and installation. Its publish protocol is not compatible with SkillHub, so use the first-party SkillHub CLI for publishing. Only fall back to raw HTTP when debugging the server itself.
 
 ## What SkillHub Is
 
@@ -111,13 +111,16 @@ npx clawhub install team-name--my-skill
 
 ### Publish
 
-Prepare a skill package directory, then publish it:
+ClawHub's upload-ticket protocol is not compatible with SkillHub. Publish with
+the first-party SkillHub CLI instead:
 
 ```bash
-npx clawhub publish ./my-skill
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=sk_your_api_token_here
+npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
 ```
 
-Publishing requires authentication and sufficient permissions in the target namespace.
+Publishing requires authentication and membership in the target namespace.
 
 ## Authentication And Visibility
 

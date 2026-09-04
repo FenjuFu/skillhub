@@ -95,7 +95,8 @@ public class SkillReviewSubmitService {
         skillVersionRepository.save(version);
 
         // Create review task
-        ReviewTask reviewTask = new ReviewTask(versionId, skill.getNamespaceId(), actorUserId);
+        ReviewTask reviewTask = new ReviewTask(
+                versionId, skill.getId(), skill.getNamespaceId(), version.getVersion(), actorUserId);
         reviewTaskRepository.save(reviewTask);
     }
 

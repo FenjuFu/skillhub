@@ -8,6 +8,14 @@ import java.util.Optional;
  */
 public interface SkillVersionRepository {
     Optional<SkillVersion> findById(Long id);
+    default Optional<SkillVersion> findByIdForUpdate(Long id) {
+        throw new UnsupportedOperationException("This repository does not provide row locking");
+    }
+    default Optional<SkillVersionStatus> findStatusByIdAndSkillId(Long id, Long skillId) {
+        return findById(id)
+                .filter(version -> version.getSkillId().equals(skillId))
+                .map(SkillVersion::getStatus);
+    }
     List<SkillVersion> findByIdIn(List<Long> ids);
     List<SkillVersion> findBySkillIdIn(List<Long> skillIds);
     List<SkillVersion> findBySkillIdInAndStatus(List<Long> skillIds, SkillVersionStatus status);

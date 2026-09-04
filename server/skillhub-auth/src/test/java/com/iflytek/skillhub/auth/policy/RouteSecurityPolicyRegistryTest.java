@@ -35,9 +35,41 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void reviewRoutesExposePublicListingButProtectCurrentUserMutations() {
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/v1/skills/10/reviews"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("GET", "/api/v1/skills/10/reviews/me"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("PUT", "/api/v1/skills/10/reviews/me"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("DELETE", "/api/v1/skills/10/reviews/me"));
+    }
+
+    @Test
+    void apiTokenPolicyAllowsCurrentUserReviewMutations() {
+        assertTrue(registry.authorizeApiToken(
+                "PUT", "/api/v1/skills/10/reviews/me", Set.of()).allowed());
+        assertTrue(registry.authorizeApiToken(
+                "DELETE", "/api/v1/skills/10/reviews/me", Set.of()).allowed());
+    }
+
+    @Test
     void authorizeApiToken_requiresPublishScopeForPublishEndpoints() {
         var denied = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:read"));
         var allowed = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:publish"));
+
+        assertFalse(denied.allowed());
+        assertEquals("skill:publish", denied.requiredScope());
+        assertTrue(allowed.allowed());
+    }
+
+    @Test
+    void authorizeApiToken_requiresPublishScopeForSecurityScanRetry() {
+        var denied = registry.authorizeApiToken(
+                "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:read"));
+        var allowed = registry.authorizeApiToken(
+                "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:publish"));
 
         assertFalse(denied.allowed());
         assertEquals("skill:publish", denied.requiredScope());

@@ -104,15 +104,19 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
                 ? Map.of()
                 : skillVersionRepository.findByIdIn(versionIds).stream()
                 .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
-        List<Long> skillIds = distinct(versionsById.values().stream().map(SkillVersion::getSkillId).toList());
+        Set<Long> skillIds = new LinkedHashSet<>(distinct(
+                versionsById.values().stream().map(SkillVersion::getSkillId).toList()));
+        skillIds.addAll(distinct(tasks.stream().map(ReviewTask::getSkillId).toList()));
         Map<Long, Skill> skillsById = skillIds.isEmpty()
                 ? Map.of()
-                : skillRepository.findByIdIn(skillIds).stream()
+                : skillRepository.findByIdIn(List.copyOf(skillIds)).stream()
                 .collect(Collectors.toMap(Skill::getId, Function.identity()));
-        List<Long> namespaceIds = distinct(skillsById.values().stream().map(Skill::getNamespaceId).toList());
+        Set<Long> namespaceIds = new LinkedHashSet<>(distinct(
+                skillsById.values().stream().map(Skill::getNamespaceId).toList()));
+        namespaceIds.addAll(distinct(tasks.stream().map(ReviewTask::getNamespaceId).toList()));
         Map<Long, Namespace> namespacesById = namespaceIds.isEmpty()
                 ? Map.of()
-                : namespaceRepository.findByIdIn(namespaceIds).stream()
+                : namespaceRepository.findByIdIn(List.copyOf(namespaceIds)).stream()
                 .collect(Collectors.toMap(Namespace::getId, Function.identity()));
         List<String> userIds = distinctStrings(tasks.stream()
                 .flatMap(task -> java.util.stream.Stream.of(task.getSubmittedBy(), task.getReviewedBy()))
@@ -168,9 +172,14 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
     }
 
     private ReviewTaskResponse toReviewTaskResponse(ReviewTask task, ReviewReadBundle bundle) {
-        SkillVersion version = require(bundle.versionsById(), task.getSkillVersionId(), "skill_version.not_found");
-        Skill skill = require(bundle.skillsById(), version.getSkillId(), "skill.not_found");
-        Namespace namespace = require(bundle.namespacesById(), skill.getNamespaceId(), "namespace.not_found");
+        Long skillId = task.getSkillId() != null
+                ? task.getSkillId()
+                : require(bundle.versionsById(), task.getSkillVersionId(), "skill_version.not_found").getSkillId();
+        Skill skill = require(bundle.skillsById(), skillId, "skill.not_found");
+        Namespace namespace = require(bundle.namespacesById(), task.getNamespaceId(), "namespace.not_found");
+        String skillVersion = task.getSkillVersion() != null
+                ? task.getSkillVersion()
+                : require(bundle.versionsById(), task.getSkillVersionId(), "skill_version.not_found").getVersion();
         UserAccount submittedBy = bundle.usersById().get(task.getSubmittedBy());
         UserAccount reviewedBy = task.getReviewedBy() != null ? bundle.usersById().get(task.getReviewedBy()) : null;
         return new ReviewTaskResponse(
@@ -178,7 +187,7 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
                 task.getSkillVersionId(),
                 namespace.getSlug(),
                 skill.getSlug(),
-                version.getVersion(),
+                skillVersion,
                 task.getStatus().name(),
                 task.getSubmittedBy(),
                 submittedBy != null ? submittedBy.getDisplayName() : null,

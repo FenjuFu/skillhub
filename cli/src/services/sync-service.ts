@@ -7,8 +7,9 @@ import { InventoryStore } from '../stores/inventory-store'
 import { SyncWorkspaceStore, type NamespaceSyncState } from '../stores/sync-workspace-store'
 import { createZip, isZipFile } from '../platform/archive'
 import { pathExists } from '../platform/paths'
+import { compareSkillVersions } from './skill-version-order'
 
-export type SyncStatus = 'up-to-date' | 'update-available' | 'local-changed' | 'orphaned' | 'not-installed'
+export type SyncStatus = 'up-to-date' | 'update-available' | 'local-changed' | 'blocked' | 'orphaned' | 'not-installed'
 
 export interface SkillSyncMetadata {
   registry: string
@@ -36,6 +37,7 @@ export interface PullResult {
   entries: SyncStatusEntry[]
   actions: Array<{ slug: string; action: 'installed' | 'updated' | 'pruned' }>
   failures: Array<{ slug: string; message: string }>
+  warnings: Array<{ slug: string; message: string }>
 }
 
 export interface PushResultItem {
@@ -87,15 +89,46 @@ export async function inspectNamespaceWorkspace(options: {
     }
 
     const snapshot = await snapshotSkillDirectory(skillDir)
+    const changedFiles = snapshot.fingerprint === metadata.fingerprint
+      ? []
+      : diffSkillFiles(metadata.files, snapshot.files)
+    const versionOrder = compareSkillVersions(metadata.version, remote.version)
+    if (versionOrder === 'remote-older') {
+      entries.push({
+        ...baseEntry(remote, 'blocked'),
+        localVersion: metadata.version,
+        changedFiles,
+        reason: 'remote version is older than the installed version; local files were kept'
+      })
+      continue
+    }
+    if (versionOrder === 'unknown') {
+      entries.push({
+        ...baseEntry(remote, 'blocked'),
+        localVersion: metadata.version,
+        changedFiles,
+        reason: 'cannot determine version order; use explicit install after verifying the release'
+      })
+      continue
+    }
+    if (versionOrder === 'same' && metadata.fingerprint !== remote.fingerprint) {
+      entries.push({
+        ...baseEntry(remote, 'blocked'),
+        localVersion: metadata.version,
+        changedFiles,
+        reason: 'remote content changed without a newer version; use explicit install after verifying the release'
+      })
+      continue
+    }
     if (snapshot.fingerprint !== metadata.fingerprint) {
       entries.push({
         ...baseEntry(remote, 'local-changed'),
         localVersion: metadata.version,
-        changedFiles: diffSkillFiles(metadata.files, snapshot.files)
+        changedFiles
       })
       continue
     }
-    if (metadata.fingerprint !== remote.fingerprint) {
+    if (versionOrder === 'remote-newer') {
       entries.push({
         ...baseEntry(remote, 'update-available'),
         localVersion: metadata.version
@@ -133,6 +166,7 @@ export async function pullNamespace(options: {
   check: boolean
   prune: boolean
   force: boolean
+  installSkillFn?: typeof installSkill
 }): Promise<PullResult> {
   const inspected = await inspectNamespaceWorkspace(options)
   const result: PullResult = {
@@ -140,13 +174,17 @@ export async function pullNamespace(options: {
     rootDir: options.rootDir,
     entries: inspected.entries,
     actions: [],
-    failures: []
+    failures: inspected.entries
+      .filter(entry => entry.status === 'blocked')
+      .map(entry => ({ slug: entry.slug, message: entry.reason ?? 'automatic sync is blocked' })),
+    warnings: []
   }
   if (options.check) return result
 
   const remoteBySlug = new Map(inspected.remoteItems.map(item => [item.slug, item]))
   for (const entry of inspected.entries) {
     if (entry.status === 'up-to-date' || entry.status === 'orphaned') continue
+    if (entry.status === 'blocked') continue
     if (entry.status === 'local-changed' && !options.force) {
       result.failures.push({ slug: entry.slug, message: entry.reason ?? 'local changes detected; pass --force to overwrite' })
       continue
@@ -154,7 +192,7 @@ export async function pullNamespace(options: {
     const remote = remoteBySlug.get(entry.slug)
     if (!remote) continue
     try {
-      await installSkill({
+      const installed = await (options.installSkillFn ?? installSkill)({
         registry: options.registry,
         token: options.token,
         namespace: options.namespace,
@@ -172,6 +210,7 @@ export async function pullNamespace(options: {
         force: entry.status !== 'not-installed' || options.force
       })
       result.actions.push({ slug: entry.slug, action: entry.status === 'not-installed' ? 'installed' : 'updated' })
+      result.warnings.push(...(installed.warnings ?? []).map(message => ({ slug: entry.slug, message })))
     } catch (error) {
       result.failures.push({ slug: entry.slug, message: error instanceof Error ? error.message : 'install failed' })
     }

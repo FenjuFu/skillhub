@@ -424,7 +424,7 @@ class SkillPublishServiceTest {
     }
 
     @Test
-    void testPublishFromEntries_ShouldReplaceRejectedVersionWithSameVersion() throws Exception {
+    void testPublishFromEntries_ShouldPreserveSettledReviewHistoryWhenReplacingRejectedVersion() throws Exception {
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";
         String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
@@ -473,7 +473,7 @@ class SkillPublishServiceTest {
 
         assertEquals("1.0.0", result.version().getVersion());
         assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
-        verify(reviewTaskRepository).deleteBySkillVersionIdIn(List.of(8L));
+        verify(reviewTaskRepository, never()).deleteBySkillVersionIdIn(List.of(8L));
         verify(skillFileRepository).deleteByVersionId(8L);
         verify(skillVersionRepository).delete(rejectedVersion);
         verify(skillVersionRepository, times(2)).flush();
@@ -482,6 +482,8 @@ class SkillPublishServiceTest {
         ArgumentCaptor<ReviewTask> reviewTaskCaptor = ArgumentCaptor.forClass(ReviewTask.class);
         verify(reviewTaskRepository).save(reviewTaskCaptor.capture());
         assertEquals(result.version().getId(), reviewTaskCaptor.getValue().getSkillVersionId());
+        assertEquals(skill.getId(), reviewTaskCaptor.getValue().getSkillId());
+        assertEquals("1.0.0", reviewTaskCaptor.getValue().getSkillVersion());
         assertEquals(publisherId, reviewTaskCaptor.getValue().getSubmittedBy());
     }
 

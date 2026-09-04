@@ -77,6 +77,20 @@ describe('user-menu module exports', () => {
 })
 
 describe('UserMenu security settings visibility', () => {
+  it('keeps author review progress separate from reviewer management', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Skill Author',
+          platformRoles: ['USER'],
+        }}
+      />,
+    )
+
+    expect(html).toContain('user.menu.reviewProgress')
+    expect(html).not.toContain('user.menu.reviews')
+  })
+
   it('shows security settings when password changes are allowed, independent of OAuth provider', () => {
     const html = renderToStaticMarkup(
       <UserMenu

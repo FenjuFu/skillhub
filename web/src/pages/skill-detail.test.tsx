@@ -74,6 +74,12 @@ vi.mock('@/features/report/use-skill-reports', () => ({
   useSubmitSkillReport: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
+vi.mock('@/features/security-audit/security-audit-summary', () => ({
+  SecurityAuditSummary: ({ versionId, versionStatus }: { versionId: number; versionStatus?: string }) => (
+    <div data-testid="security-audit-summary">audit:{versionId}:{versionStatus}</div>
+  ),
+}))
+
 vi.mock('@/shared/lib/toast', () => ({
   toast: { success: toastMocks.success, error: toastMocks.error },
 }))
@@ -348,6 +354,20 @@ describe('SkillDetailPage', () => {
     expect(html).not.toContain('skillDetail.deleteSkill')
   })
 
+  it('wraps a long skill name instead of widening the mobile page', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ displayName: 'review-runtime-1788284593-353294' }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('text-balance break-words text-4xl')
+    expect(html).toContain('[overflow-wrap:anywhere]')
+  })
+
   it('shows the label management panel for a user who can manage the skill lifecycle', () => {
     useSkillDetailMock.mockReturnValue({
       data: createSkill({
@@ -483,6 +503,32 @@ describe('SkillDetailPage', () => {
 
     expect(html).toContain('skillDetail.versionStatusPendingReview')
     expect(html).not.toContain('skillDetail.versionStatusScanFailed')
+  })
+
+  it('binds scan retry to the failed owner preview when a published version remains visible', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canManageLifecycle: true,
+        headlineVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+        publishedVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+        ownerPreviewVersion: { id: 12, version: '1.2.0', status: 'SCAN_FAILED' },
+        resolutionMode: 'PUBLISHED',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        { id: 10, version: '1.0.0', status: 'PUBLISHED', downloadAvailable: true },
+        { id: 12, version: '1.2.0', status: 'SCAN_FAILED', downloadAvailable: false },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('audit:12:SCAN_FAILED')
+    expect(html).not.toContain('audit:10:PUBLISHED')
   })
 
   it('allows long pending review versions to wrap inside the review card', () => {

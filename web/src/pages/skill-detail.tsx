@@ -27,6 +27,7 @@ import { isSkillDetailQueriesEnabled } from './skill-detail-query'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { SubscribeButton } from '@/features/social/subscribe-button'
+import { SkillReviews } from '@/features/social/skill-reviews'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi, ApiError, buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
@@ -199,6 +200,12 @@ export function SkillDetailPage() {
   const canReport = skill?.canReport ?? true
   const canHardDeleteSkill = Boolean(skill && user && (skill.ownerId === user.userId || hasRole('SUPER_ADMIN')))
   const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
+  const canManageSecurityScan = Boolean(skill && user && (
+    skill.canManageLifecycle || hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
+  ))
+  const securityAuditVersion = ownerPreviewVersion?.status === 'SCAN_FAILED'
+    ? ownerPreviewVersion
+    : selectedVersionEntry
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
@@ -828,17 +835,17 @@ export function SkillDetailPage() {
               </span>
             )}
             {isReviewFlowPending && (
-              <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
+              <span className="badge-soft bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
                 {t('skillDetail.versionStatusPendingReview')}
               </span>
             )}
             {!isPendingPreview && (isRejectedPreview || hasRejectedOwnerPreview) && skill.canManageLifecycle && (
-              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+              <span className="badge-soft bg-red-100 text-red-900 dark:bg-red-950/60 dark:text-red-300">
                 {t('skillDetail.rejectedBadge')}
               </span>
             )}
           </div>
-          <h1 className="text-balance text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
+          <h1 className="text-balance break-words text-4xl font-bold font-heading text-foreground [overflow-wrap:anywhere]">{skill.displayName}</h1>
           {skill.ownerDisplayName && (
             <div className="flex min-w-0">
               <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/85 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm">
@@ -862,8 +869,8 @@ export function SkillDetailPage() {
                   className={cn(
                     'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
                     label.type === 'PRIVILEGED'
-                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80'
-                      : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200/80',
+                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-900/70'
+                      : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
                   )}
                 >
                   {label.displayName}
@@ -1078,6 +1085,8 @@ export function SkillDetailPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <SkillReviews skillId={skill.id} canInteract={canInteract} onRequireLogin={requireLogin} />
       </div>
 
       {/* Sidebar */}
@@ -1260,8 +1269,13 @@ export function SkillDetailPage() {
           disabled={!selectedVersionEntry || skill.status === 'ARCHIVED' || !isVersionDownloadable}
         />
 
-        {skill.canManageLifecycle && selectedVersionEntry && (
-          <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} versionStatus={selectedVersionEntry.status} />
+        {canManageSecurityScan && securityAuditVersion && (
+          <SecurityAuditSummary
+            skillId={skill.id}
+            versionId={securityAuditVersion.id}
+            versionStatus={securityAuditVersion.status}
+            canRetry
+          />
         )}
 
         <SkillLabelPanel

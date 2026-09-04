@@ -57,15 +57,18 @@ SkillHub 提供了类似 npm 的发布体验，但增加了企业级的权限控
 2. **使用 CLI 发布（推荐）**
 
 ```bash
-# 配置注册中心
-export CLAWHUB_REGISTRY=http://localhost:8080
+# 配置 SkillHub 注册中心
+export SKILLHUB_REGISTRY=http://localhost:8080
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
 
 # 发布到默认命名空间
-npx clawhub publish ./my-skill
+npx @astron-team/skillhub@latest publish ./my-skill
 
 # 发布到指定命名空间
-npx clawhub publish ./my-skill --namespace my-team
+npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
 ```
+
+> ClawHub CLI 的发布与同步协议与 SkillHub 不兼容。发布请使用上面的 SkillHub CLI。
 
 3. **使用 Web UI 发布**
 

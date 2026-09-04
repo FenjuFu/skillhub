@@ -65,8 +65,8 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
         onClick={() => setOpen((current) => !current)}
       >
         <Globe className="h-4 w-4" />
-        <span className="text-sm text-inherit">{currentLanguage.name}</span>
-        <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+        <span className="hidden text-sm text-inherit sm:inline">{currentLanguage.name}</span>
+        <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:block" />
       </Button>
       {open ? (
         <div className="absolute right-0 top-full z-50 pt-2">

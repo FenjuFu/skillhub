@@ -401,8 +401,9 @@ Agent Skill 目录——都可以直接发布到你的注册中心：
 git clone https://github.com/anthropics/skills
 
 # ……并将其发布到你的私有 SkillHub 注册中心
-export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-npx clawhub publish ./skills/<分类>/<技能名>
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
+npx @astron-team/skillhub@latest publish ./skills/<分类>/<技能名>
 ```
 
 > ⚖️ **许可提示**：转发布时请遵守每个技能各自的许可证。`anthropics/skills` 中大多数技能
@@ -431,15 +432,17 @@ npx clawhub search email
 npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
-# 发布到 global 空间
-npx clawhub publish ./my-skill --slug my-skill --version 1.0.0
-
-# 发布到如 my-space 这样的团队空间
-npx clawhub publish ./my-skill --slug my-space--my-skill --version 1.0.0
+# 发布请使用第一方 SkillHub CLI
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+export SKILLHUB_TOKEN=YOUR_API_TOKEN
+npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 其中 `my-space--my-skill` 是兼容层使用的 canonical slug，SkillHub 会将其解析为
 namespace `my-space` 和 skill slug `my-skill`。
+
+ClawHub 兼容范围包含搜索、查看和安装；其发布协议与 SkillHub 不兼容。
+发布请使用上面的第一方 CLI。
 
 > 💡 **提示**：上述命令不仅适用于 OpenClaw，通过指定安装目录（`--dir`），也可适用于其他的 CLI Coding Agent 或 Agent 助手。例如：`npx clawhub --dir ~/.claude/skills install my-skill`
 

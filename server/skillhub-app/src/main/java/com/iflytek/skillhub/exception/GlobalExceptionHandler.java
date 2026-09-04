@@ -17,6 +17,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.FieldError;
@@ -66,6 +67,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LocalizedDomainException.class)
     public ResponseEntity<ApiResponse<Void>> handleLocalizedDomainException(LocalizedDomainException ex, HttpServletRequest request) {
         return renderLocalizedError(ex, HttpStatus.valueOf(ex.statusCode()), request);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePersistenceConflict(
+            RuntimeException ex,
+            HttpServletRequest request) {
+        logHandledException(HttpStatus.CONFLICT, "error.request.conflict", request);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                apiResponseFactory.error(409, "error.request.conflict"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -177,12 +187,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AsyncRequestTimeoutException.class)
     public ResponseEntity<?> handleAsyncRequestTimeout(AsyncRequestTimeoutException ex, HttpServletRequest request) {
-        String path = request.getRequestURI();
-        if (path != null && path.endsWith("/sse")) {
-            logger.debug("SSE timeout [requestId={}, path={}]", requestIdAccessor.current(), path);
-            return ResponseEntity.noContent().build();
-        }
-
         logHandledException(HttpStatus.REQUEST_TIMEOUT, "error.request.timeout", request);
         return ResponseEntity.status(HttpStatus.REQUEST_TIMEOUT).body(
                 apiResponseFactory.error(408, "error.request.timeout"));

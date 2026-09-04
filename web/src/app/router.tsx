@@ -103,6 +103,10 @@ const NamespaceReviewDetailPage = createLazyRouteComponent(
 )
 const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
 const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
+const ReviewProgressPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/review-progress'),
+  'ReviewProgressPage',
+)
 const ReportsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/reports'),
   'ReportsPage',
@@ -283,9 +287,20 @@ const dashboardPublishRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/publish',
   beforeLoad: requireAuth,
-  validateSearch: (search: Record<string, unknown>): { namespace?: string; visibility?: string } => ({
+  validateSearch: (search: Record<string, unknown>): {
+    namespace?: string
+    visibility?: string
+    resubmitSkill?: string
+    resubmitVersion?: string
+  } => ({
     namespace: typeof search.namespace === 'string' && search.namespace ? search.namespace : undefined,
     visibility: typeof search.visibility === 'string' && search.visibility ? search.visibility : undefined,
+    resubmitSkill: typeof search.resubmitSkill === 'string' && search.resubmitSkill
+      ? search.resubmitSkill
+      : undefined,
+    resubmitVersion: typeof search.resubmitVersion === 'string' && search.resubmitVersion
+      ? search.resubmitVersion
+      : undefined,
   }),
   component: PublishPage,
 })
@@ -328,6 +343,24 @@ const dashboardReviewsRoute = createRoute({
   component: ReviewsPage,
 })
 
+const dashboardReviewProgressRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/review-progress',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): {
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+    q?: string
+    page?: number
+  } => ({
+    status: search.status === 'PENDING' || search.status === 'APPROVED' || search.status === 'REJECTED'
+      ? search.status
+      : undefined,
+    q: typeof search.q === 'string' && search.q.trim() ? search.q.trim() : undefined,
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
+  component: ReviewProgressPage,
+})
+
 const dashboardReportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reports',
@@ -360,6 +393,9 @@ const dashboardStarsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/stars',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { page?: number } => ({
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
   component: MyStarsPage,
 })
 
@@ -367,6 +403,9 @@ const dashboardSubscriptionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/subscriptions',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { page?: number } => ({
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
   component: MySubscriptionsPage,
 })
 
@@ -478,6 +517,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespaceReviewDetailRoute,
   dashboardGovernanceRoute,
   dashboardReviewsRoute,
+  dashboardReviewProgressRoute,
   dashboardReportsRoute,
   dashboardReviewDetailRoute,
   dashboardPromotionsRoute,

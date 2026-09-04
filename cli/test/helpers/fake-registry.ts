@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto'
+import { unzipSync } from 'fflate'
+
 type FakeHandler = (req: Request) => Response | Promise<Response>
 
 export function createFakeRegistry(handlers: Record<string, FakeHandler>) {
@@ -68,10 +71,23 @@ export interface FakeSkill {
   version?: string
   /** Numeric version id returned in resolve. Defaults to 1. */
   versionId?: number
-  /** SHA-256 fingerprint string. Defaults to 'deadbeef'. */
+  /** SHA-256 fingerprint string. Defaults to the fingerprint of zipBytes. */
   fingerprint?: string
   /** Raw bytes served as the ZIP body. Defaults to a minimal valid ZIP. */
   zipBytes?: Uint8Array
+}
+
+function resolveSkillFingerprint(skill: FakeSkill): string {
+  if (skill.fingerprint) return skill.fingerprint
+  const entries = unzipSync(skill.zipBytes ?? MINIMAL_ZIP)
+  const aggregate = createHash('sha256')
+  for (const path of Object.keys(entries)
+    .filter(path => !path.endsWith('/') && path !== '.skillhub' && !path.startsWith('.skillhub/'))
+    .sort((left, right) => left.localeCompare(right))) {
+    const fileHash = createHash('sha256').update(entries[path]!).digest('hex')
+    aggregate.update(`${path}:${fileHash}\n`, 'utf8')
+  }
+  return `sha256:${aggregate.digest('hex')}`
 }
 
 // Minimal valid ZIP: local file header + end-of-central-directory record with
@@ -103,6 +119,7 @@ export interface CapturedPublish {
   /** Visibility string from the multipart form field. */
   visibility: string
   rejectExistingVersion: boolean
+  archiveEntries: string[]
 }
 
 export interface CapturedValidate {
@@ -203,7 +220,9 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     delete: CapturedDelete | null
     validate: CapturedValidate | null
     review: CapturedReview | null
-  } = { publish: null, resolve: null, delete: null, validate: null, review: null }
+    resolves: number
+    downloads: number
+  } = { publish: null, resolve: null, delete: null, validate: null, review: null, resolves: 0, downloads: 0 }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
   // TCP-level failure. Start a connection-dropping server and return its URL
@@ -291,7 +310,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
               slug: skill.slug,
               version: skill.version ?? '1.0.0',
               versionId: skill.versionId ?? index + 1,
-              fingerprint: skill.fingerprint ?? 'deadbeef',
+              fingerprint: resolveSkillFingerprint(skill),
               updatedAt: '2026-08-18T00:00:00Z',
               visibility: 'NAMESPACE_ONLY',
               downloadUrl: buildDownloadUrl(baseUrl, namespace, skill.slug, skill.version ?? '1.0.0')
@@ -308,6 +327,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
       // Resolve: GET /api/cli/v1/skills/:namespace/:slug/resolve
       const resolveMatch = path.match(/^\/api\/cli\/v1\/skills\/([^/]+)\/([^/]+)\/resolve$/)
       if (resolveMatch && req.method === 'GET') {
+        state.resolves++
         if (options.failures?.resolve) return failureResponse(options.failures.resolve)
         const namespace = resolveMatch[1]!
         const slug = resolveMatch[2]!
@@ -329,7 +349,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
             slug,
             version,
             versionId: skill.versionId ?? 1,
-            fingerprint: skill.fingerprint ?? 'deadbeef',
+            fingerprint: resolveSkillFingerprint(skill),
             downloadUrl: buildDownloadUrl(baseUrl, namespace, slug, version)
           }
         })
@@ -345,6 +365,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
         }
+        state.downloads += 1
         const bytes = skill.zipBytes ?? MINIMAL_ZIP
         return new Response(bytes as BodyInit, {
           status: 200,
@@ -364,6 +385,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
         }
+        state.downloads += 1
         const bytes = skill.zipBytes ?? MINIMAL_ZIP
         return new Response(bytes as BodyInit, {
           status: 200,
@@ -415,6 +437,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
+
           state.validate = {
             namespace,
             fileName,
@@ -442,7 +465,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         const namespace = publishMatch[1]!
 
         // Parse multipart form data asynchronously — return a Promise<Response>.
-        return req.formData().then(form => {
+        return req.formData().then(async form => {
           const fileField = form.get('file')
           const visibility = (form.get('visibility') as string | null) ?? 'PUBLIC'
 
@@ -451,13 +474,17 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
+          const archiveEntries = fileField instanceof File
+            ? Object.keys(unzipSync(new Uint8Array(await fileField.arrayBuffer()))).sort()
+            : []
 
           // Record for test assertions.
           state.publish = {
             namespace,
             fileName,
             visibility,
-            rejectExistingVersion: form.get('rejectExistingVersion') === 'true'
+            rejectExistingVersion: form.get('rejectExistingVersion') === 'true',
+            archiveEntries
           }
 
           return Response.json({

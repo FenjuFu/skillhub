@@ -15,6 +15,8 @@ import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
+import com.iflytek.skillhub.service.SecurityScanRetryAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -34,7 +36,9 @@ import java.util.Set;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -60,6 +64,37 @@ class SecurityAuditControllerTest {
 
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
+
+    @MockBean
+    private SecurityScanRetryAppService securityScanRetryAppService;
+
+    @Test
+    void retrySecurityScan_returnsScanningState() throws Exception {
+        given(securityScanRetryAppService.retry(
+                org.mockito.ArgumentMatchers.eq(8L),
+                org.mockito.ArgumentMatchers.eq(42L),
+                org.mockito.ArgumentMatchers.eq("owner-1"),
+                org.mockito.ArgumentMatchers.eq(Set.of()),
+                org.mockito.ArgumentMatchers.anyMap(),
+                org.mockito.ArgumentMatchers.any()))
+                .willReturn(new SkillLifecycleMutationResponse(8L, 42L, "RETRY_SECURITY_SCAN", "SCANNING"));
+
+        mockMvc.perform(post("/api/v1/skills/8/versions/42/security-audit/retry")
+                        .with(auth("owner-1"))
+                        .with(csrf())
+                        .requestAttr("userNsRoles", Map.of()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.action").value("RETRY_SECURITY_SCAN"))
+                .andExpect(jsonPath("$.data.status").value("SCANNING"));
+    }
+
+    @Test
+    void retrySecurityScan_requiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/skills/8/versions/42/security-audit/retry").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
+    }
 
     @Test
     void getSecurityAudit_returnsAuditPayload() throws Exception {
