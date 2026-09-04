@@ -51,12 +51,10 @@ test.describe('Public Skill Detail Anonymous Access (Real API)', () => {
     const clawhubTarget = current.skill.namespace === 'global'
       ? current.skill.slug
       : `${current.skill.namespace}--${current.skill.slug}`
-    const skillhubNamespace = current.skill.namespace === 'global'
-      ? ''
-      : ` --namespace ${current.skill.namespace}`
+    const skillhubCoordinate = `@${current.skill.namespace}/${current.skill.slug}`
 
     await expect(page.getByRole('tab', { name: 'SkillHub CLI' })).toHaveAttribute('aria-selected', 'true')
-    await expect(page.getByText(new RegExp(`npx @astron-team/skillhub@latest install ${escapeRegExp(current.skill.slug)}${escapeRegExp(skillhubNamespace)} --registry`))).toBeVisible()
+    await expect(page.getByText(new RegExp(`npx @astron-team/skillhub@latest install ${escapeRegExp(skillhubCoordinate)} --version ${escapeRegExp(current.skill.version)} --registry`))).toBeVisible()
     await expect(page.getByRole('button', { name: 'Copy' }).first()).toBeVisible()
 
     await page.getByRole('tab', { name: 'ClawHub CLI' }).click()
