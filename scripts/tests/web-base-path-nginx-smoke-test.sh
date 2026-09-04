@@ -106,6 +106,10 @@ printf '%s' "$guide" | grep -F 'read the sibling `.skillhub/metadata.json` first
 printf '%s' "$guide" | grep -F 'skillhub list --agent <agent> --registry https://skill.example.com/skillhub --json' >/dev/null
 printf '%s' "$guide" | grep -F 'skillhub install @global/skillhub-registry' >/dev/null
 printf '%s' "$guide" | grep -F 'skillhub upgrade @global/skillhub-registry \' >/dev/null
+if printf '%s' "$guide" | sed -n '/skillhub upgrade @global\/skillhub-registry \\/,/--json/p' | grep -F -- '--agent' >/dev/null; then
+  echo 'helper upgrade must cover all installed Agent targets' >&2
+  exit 1
+fi
 printf '%s' "$guide" | grep -F 'skillhub search "<query>" --registry https://skill.xfyun.cn --json' >/dev/null
 printf '%s' "$guide" | grep -F 'npx --yes clawhub search "<query>"' >/dev/null
 printf '%s' "$guide" | grep -F 'skillhub login --token <token> --registry https://skill.example.com/skillhub' >/dev/null

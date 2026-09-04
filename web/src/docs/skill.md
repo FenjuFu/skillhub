@@ -56,11 +56,10 @@ skillhub install @global/skillhub-registry \
 
 If this registry does not publish the helper Skill, report that persistent connection was skipped and continue installing the Skill the user requested. Do not substitute a helper Skill from another registry because that would bind future requests to the wrong primary source. A helper installation failure must not block the requested Skill.
 
-If the helper is already installed for this Agent, check its original source for an update:
+If the helper is already installed, check its original source for an update across all installed Agent targets. SkillHub intentionally rejects partial-target upgrades for one installation record:
 
 ```bash
 skillhub upgrade @global/skillhub-registry \
-  --agent <agent> \
   --registry https://skillhub.your-company.com \
   --check \
   --json
