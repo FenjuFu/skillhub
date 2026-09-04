@@ -67,7 +67,9 @@ test.describe('Public Skill Detail Anonymous Access (Real API)', () => {
     expect(agentPrompt).toContain(`${registryUrl}/install/skillhub.md`)
     expect(agentPrompt).toContain(skillhubCoordinate)
     expect(agentPrompt).toContain(current.skill.version)
-    expect(agentPrompt).toContain('ask for my confirmation')
+    expect(agentPrompt).toContain('explain why and stop')
+    expect(agentPrompt).toContain('do not use another source')
+    expect(agentPrompt).not.toContain('fallback')
 
     await page.getByRole('tab', { name: 'ClawHub CLI' }).click()
 

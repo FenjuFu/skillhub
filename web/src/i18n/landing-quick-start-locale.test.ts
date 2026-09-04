@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import skillGuide from '../docs/skill.md?raw'
+import skillGuideTemplate from '../docs/skill.md.template?raw'
 import en from './locales/en.json'
 import ru from './locales/ru.json'
 import zh from './locales/zh.json'
@@ -25,9 +27,19 @@ describe('landing quick start locales', () => {
       en.skillDetail.installForAgent.prompt,
       ru.skillDetail.installForAgent.prompt,
     ]) {
+      expect(prompt).toContain('{{guideUrl}}')
+      expect(prompt).toContain('{{skill}}')
+      expect(prompt).toContain('{{version}}')
       expect(prompt).not.toContain('fallback')
       expect(prompt).not.toContain('备用公共')
       expect(prompt).toMatch(/不要改用其他来源|do not use another source|не используйте другой источник/)
+    }
+  })
+
+  it('limits fallback to discovery in both served guide sources', () => {
+    for (const guide of [skillGuide, skillGuideTemplate]) {
+      expect(guide).toContain('Fallback is only appropriate for discovery requests')
+      expect(guide).toContain('For an exact coordinate or version request, report the failure and stop')
     }
   })
 
