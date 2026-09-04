@@ -32,7 +32,8 @@ describe('landing quick start locales', () => {
       expect(prompt).toContain('{{version}}')
       expect(prompt).not.toContain('fallback')
       expect(prompt).not.toContain('备用公共')
-      expect(prompt).toMatch(/不要改用其他来源|do not use another source|не используйте другой источник/)
+      expect(prompt).not.toMatch(/若无法安装|If installation fails|Если установка не удалась/)
+      expect(prompt).not.toMatch(/不要改用其他来源|do not use another source|не используйте другой источник/)
     }
   })
 

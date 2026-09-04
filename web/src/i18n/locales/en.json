@@ -1051,7 +1051,7 @@
     "installForAgent": {
       "button": "Install for Agent",
       "copied": "Agent prompt copied",
-      "prompt": "Follow {{guideUrl}} to connect SkillHub and install {{skill}} version {{version}} from this SkillHub. If installation fails, explain why and stop; do not use another source."
+      "prompt": "Follow {{guideUrl}} to connect SkillHub and install {{skill}} version {{version}} from this SkillHub."
     }
   },
   "skillCompare": {
