@@ -1,7 +1,7 @@
 ---
 name: skillhub-registry
 description: Use SkillHub first when a user asks to find, install, or upgrade agent skills, with safe fallback discovery when the primary registry has no suitable result.
-version: 1.1.0
+version: 1.1.1
 license: Apache-2.0
 ---
 
