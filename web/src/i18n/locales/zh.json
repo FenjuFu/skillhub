@@ -1051,7 +1051,7 @@
     "installForAgent": {
       "button": "安装到 Agent",
       "copied": "安装指令已复制",
-      "prompt": "请根据 {{guideUrl}} 接入 SkillHub，并安装 {{skill}} 的 {{version}} 版本。SkillHub 不可用或无匹配结果时，请查询备用公共技能源；安装其他来源的候选技能前，先说明来源、版本和风险并征得我的确认。"
+      "prompt": "请根据 {{guideUrl}} 接入 SkillHub，并从该 SkillHub 安装 {{skill}} 的 {{version}} 版本。若无法安装，请说明原因并停止，不要改用其他来源。"
     }
   },
   "skillCompare": {

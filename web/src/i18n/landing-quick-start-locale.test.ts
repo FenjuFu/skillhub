@@ -19,6 +19,18 @@ describe('landing quick start locales', () => {
     expect(ru.landing.quickStart.human.commandTemplate).toContain('--registry {{url}}')
   })
 
+  it('keeps exact skill installs on the selected registry', () => {
+    for (const prompt of [
+      zh.skillDetail.installForAgent.prompt,
+      en.skillDetail.installForAgent.prompt,
+      ru.skillDetail.installForAgent.prompt,
+    ]) {
+      expect(prompt).not.toContain('fallback')
+      expect(prompt).not.toContain('备用公共')
+      expect(prompt).toMatch(/不要改用其他来源|do not use another source|не используйте другой источник/)
+    }
+  })
+
   it('exposes CLI install command in both locales', () => {
     expect(zh.landing.quickStart.tabs.cli).toBe('CLI')
     expect(zh.landing.quickStart.cli.command).toBe('npm i -g @astron-team/skillhub')
