@@ -127,7 +127,8 @@
       },
       "human": {
         "description": "Используйте SkillHub CLI для поиска и установки Skills",
-        "command": "npx @astron-team/skillhub@latest search <keyword>"
+        "command": "npx @astron-team/skillhub@latest search <keyword> --registry https://www.example.com",
+        "commandTemplate": "npx @astron-team/skillhub@latest search <keyword> --registry {{url}}"
       },
       "steps": {
         "configureEnv": {

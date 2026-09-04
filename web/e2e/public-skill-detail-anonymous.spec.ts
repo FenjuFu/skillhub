@@ -52,10 +52,22 @@ test.describe('Public Skill Detail Anonymous Access (Real API)', () => {
       ? current.skill.slug
       : `${current.skill.namespace}--${current.skill.slug}`
     const skillhubCoordinate = `@${current.skill.namespace}/${current.skill.slug}`
+    const registryUrl = new URL(page.url()).origin
 
     await expect(page.getByRole('tab', { name: 'SkillHub CLI' })).toHaveAttribute('aria-selected', 'true')
-    await expect(page.getByText(new RegExp(`npx @astron-team/skillhub@latest install ${escapeRegExp(skillhubCoordinate)} --version ${escapeRegExp(current.skill.version)} --registry`))).toBeVisible()
+    await expect(page.getByText(
+      `npx @astron-team/skillhub@latest install ${skillhubCoordinate} --version ${current.skill.version} --registry ${registryUrl}`,
+      { exact: true },
+    )).toBeVisible()
     await expect(page.getByRole('button', { name: 'Copy' }).first()).toBeVisible()
+
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: registryUrl })
+    await page.getByTestId('install-for-agent-button').click()
+    const agentPrompt = await page.evaluate(() => navigator.clipboard.readText())
+    expect(agentPrompt).toContain(`${registryUrl}/install/skillhub.md`)
+    expect(agentPrompt).toContain(skillhubCoordinate)
+    expect(agentPrompt).toContain(current.skill.version)
+    expect(agentPrompt).toContain('ask for my confirmation')
 
     await page.getByRole('tab', { name: 'ClawHub CLI' }).click()
 

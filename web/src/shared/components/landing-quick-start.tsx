@@ -74,6 +74,10 @@ export function LandingQuickStartSection() {
     defaultValue: t('landing.quickStart.agent.command'),
     url: `${baseUrl}/install/skillhub.md`,
   })
+  const humanCommand = t('landing.quickStart.human.commandTemplate', {
+    defaultValue: t('landing.quickStart.human.command'),
+    url: baseUrl,
+  })
 
   const tabs: LandingQuickStartTab[] = [
     {
@@ -86,7 +90,7 @@ export function LandingQuickStartSection() {
       id: 'human',
       label: t('landing.quickStart.tabs.human'),
       description: t('landing.quickStart.human.description'),
-      command: t('landing.quickStart.human.command'),
+      command: humanCommand,
     },
     {
       id: 'cli',

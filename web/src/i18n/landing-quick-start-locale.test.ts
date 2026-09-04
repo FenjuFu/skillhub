@@ -14,6 +14,9 @@ describe('landing quick start locales', () => {
     expect(zh.landing.quickStart.agent.commandTemplate).toBe('请根据 {{url}} 接入 SkillHub')
     expect(en.landing.quickStart.agent.commandTemplate).toBe('Connect SkillHub using {{url}}')
     expect(ru.landing.quickStart.agent.commandTemplate).toBe('Подключите SkillHub по инструкции {{url}}')
+    expect(zh.landing.quickStart.human.commandTemplate).toContain('--registry {{url}}')
+    expect(en.landing.quickStart.human.commandTemplate).toContain('--registry {{url}}')
+    expect(ru.landing.quickStart.human.commandTemplate).toContain('--registry {{url}}')
   })
 
   it('exposes CLI install command in both locales', () => {
