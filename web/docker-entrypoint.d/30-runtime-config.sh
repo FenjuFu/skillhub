@@ -24,7 +24,13 @@ envsubst '${SKILLHUB_WEB_API_BASE_URL} ${SKILLHUB_PUBLIC_BASE_URL} ${SKILLHUB_WE
 # Generate both the preferred install guide and the compatibility route from
 # one template so self-hosted deployments keep their own registry URL.
 mkdir -p /usr/share/nginx/html/install
-envsubst '${SKILLHUB_PUBLIC_BASE_URL}' \
+guide_public_base_url="$SKILLHUB_PUBLIC_BASE_URL"
+if [ -z "$guide_public_base_url" ]; then
+  # Nginx replaces this marker from the sanitized request scheme, Host, and
+  # configured base path. This keeps zero-config self-hosted installs usable.
+  guide_public_base_url='__SKILLHUB_PUBLIC_BASE_URL__'
+fi
+SKILLHUB_PUBLIC_BASE_URL="$guide_public_base_url" envsubst '${SKILLHUB_PUBLIC_BASE_URL}' \
   < /usr/share/nginx/html/registry/skill.md.template \
   > /usr/share/nginx/html/registry/skill.md
 cp /usr/share/nginx/html/registry/skill.md /usr/share/nginx/html/install/skillhub.md

@@ -19,7 +19,7 @@ port=18080
 
 tmp=$(mktemp -d)
 cleanup() {
-  docker rm -f "$name" "$name-fixed" >/dev/null 2>&1 || true
+  docker rm -f "$name" "$name-fixed" "$name-default" >/dev/null 2>&1 || true
   rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -125,6 +125,45 @@ if [ "$cache_control" != 'no-cache' ]; then
 fi
 
 docker rm -f "$name" >/dev/null 2>&1 || true
+
+# With no explicit public URL, the guide must derive the registry from the
+# sanitized request scheme, Host (including port), and deployment base path.
+default_html="$tmp/default-html"
+mkdir -p "$default_html/assets" "$default_html/install" "$default_html/registry"
+printf '%s\n' 'INDEX_HTML_MARKER' >"$default_html/index.html"
+cp "$ROOT_DIR/web/src/docs/skill.md.template" "$default_html/registry/skill.md.template"
+cp "$ROOT_DIR/web/runtime-config.js.template" "$default_html/runtime-config.js.template"
+name_default="$name-default"
+port_default=18082
+docker run -d --name "$name_default" \
+  -p "$port_default:80" \
+  -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
+  -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
+  -e SKILLHUB_WEB_BASE_PATH=/ \
+  -v "$default_html:/usr/share/nginx/html" \
+  -v "$ROOT_DIR/web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro" \
+  -v "$entrypoint_d/20-base-path.sh:/docker-entrypoint.d/20-base-path.sh:ro" \
+  -v "$entrypoint_d/30-runtime-config.sh:/docker-entrypoint.d/30-runtime-config.sh:ro" \
+  "$NGINX_IMAGE" >/dev/null
+
+default_base="http://127.0.0.1:$port_default"
+i=0
+until curl -fsS -o /dev/null "$default_base/nginx-health" 2>/dev/null; do
+  i=$((i + 1))
+  if [ "$i" -ge 30 ]; then
+    echo 'nginx (default public URL) did not become ready' >&2
+    docker logs "$name_default" >&2 || true
+    exit 1
+  fi
+  sleep 1
+done
+default_guide=$(curl -fsS "$default_base/install/skillhub.md")
+printf '%s' "$default_guide" | grep -F "The primary registry for this guide is \`$default_base\`." >/dev/null
+if printf '%s' "$default_guide" | grep -F '__SKILLHUB_PUBLIC_BASE_URL__' >/dev/null; then
+  echo 'default Agent guide must not expose the runtime URL marker' >&2
+  exit 1
+fi
+docker rm -f "$name_default" >/dev/null 2>&1 || true
 
 # Fixed-base image served via the bundled deploy configs: assets are baked under
 # /fixed/, a baked-base marker is present, and SKILLHUB_WEB_BASE_PATH is passed as
