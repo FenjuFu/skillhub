@@ -157,13 +157,22 @@ public class AccountMergeService {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.tokenExpired");
         }
 
-        UserAccount primaryUser = loadActiveUser(primaryUserId);
-        UserAccount secondaryUser = userAccountRepository.findById(request.getSecondaryUserId())
-            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.secondaryNotFound"));
+        String secondaryUserId = request.getSecondaryUserId();
+        String firstUserId = primaryUserId.compareTo(secondaryUserId) < 0 ? primaryUserId : secondaryUserId;
+        String secondUserId = primaryUserId.compareTo(secondaryUserId) < 0 ? secondaryUserId : primaryUserId;
+        UserAccount firstUser = userAccountRepository.findLockedById(firstUserId)
+            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
+        UserAccount secondUser = userAccountRepository.findLockedById(secondUserId)
+            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
+        UserAccount primaryUser = firstUser.getId().equals(primaryUserId) ? firstUser : secondUser;
+        UserAccount secondaryUser = firstUser.getId().equals(secondaryUserId) ? firstUser : secondUser;
+        if (primaryUser.getStatus() != UserStatus.ACTIVE) {
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.primaryNotActive");
+        }
         validateMergePair(primaryUser, secondaryUser);
 
         migrateIdentityBindings(primaryUser.getId(), secondaryUser.getId());
-        migrateApiTokens(primaryUser.getId(), secondaryUser.getId());
+        revokeSecondaryApiTokens(secondaryUser.getId());
         migrateUserRoles(primaryUser.getId(), secondaryUser.getId());
         migrateNamespaceMemberships(primaryUser.getId(), secondaryUser.getId());
         migrateLocalCredential(primaryUser.getId(), secondaryUser.getId());
@@ -249,12 +258,11 @@ public class AccountMergeService {
         identityBindingRepository.saveAll(bindings);
     }
 
-    private void migrateApiTokens(String primaryUserId, String secondaryUserId) {
+    private void revokeSecondaryApiTokens(String secondaryUserId) {
         List<ApiToken> tokens = apiTokenRepository.findByUserId(secondaryUserId);
         for (ApiToken token : tokens) {
-            token.setUserId(primaryUserId);
-            if ("USER".equals(token.getSubjectType())) {
-                token.setSubjectId(primaryUserId);
+            if (token.getRevokedAt() == null) {
+                token.setRevokedAt(currentTime());
             }
         }
         apiTokenRepository.saveAll(tokens);

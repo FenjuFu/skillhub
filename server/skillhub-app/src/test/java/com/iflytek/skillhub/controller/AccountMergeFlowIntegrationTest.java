@@ -15,6 +15,7 @@ import com.iflytek.skillhub.auth.merge.AccountMergeRequest;
 import com.iflytek.skillhub.auth.merge.AccountMergeRequestRepository;
 import com.iflytek.skillhub.auth.merge.AccountMergeService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
@@ -72,6 +73,7 @@ class AccountMergeFlowIntegrationTest {
     @Autowired private LocalCredentialRepository localCredentialRepository;
     @Autowired private AccountMergeRequestRepository mergeRequestRepository;
     @Autowired private AccountMergeService mergeService;
+    @Autowired private ApiTokenService apiTokenService;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockBean private NamespaceMemberRepository namespaceMemberRepository;
@@ -85,6 +87,8 @@ class AccountMergeFlowIntegrationTest {
         userAccountRepository.save(new UserAccount(primaryId, "Primary", null, null));
         userAccountRepository.save(new UserAccount(secondaryId, "Secondary", null, null));
         localCredentialRepository.save(new LocalCredential(secondaryId, secondaryUsername, "hash"));
+        String secondaryToken = apiTokenService.createToken(secondaryId, "secondary-automation", "[]").rawToken();
+        String primaryToken = apiTokenService.createToken(primaryId, "primary-automation", "[]").rawToken();
 
         String initiateResponse = mockMvc.perform(post("/api/v1/account/merge/initiate")
                 .with(authentication(auth(primaryId)))
@@ -124,6 +128,60 @@ class AccountMergeFlowIntegrationTest {
         assertThat(userAccountRepository.findById(secondaryId).orElseThrow().getStatus()).isEqualTo(UserStatus.MERGED);
         assertThat(localCredentialRepository.findByUsernameIgnoreCase(secondaryUsername).orElseThrow().getUserId())
             .isEqualTo(primaryId);
+        assertThat(apiTokenService.validateToken(secondaryToken)).isEmpty();
+        assertThat(apiTokenService.validateToken(primaryToken)).isPresent();
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + secondaryToken))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void directApiCallsCannotSpoofAnotherAccountOrBypassCsrf() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String primaryId = "merge-primary-" + suffix;
+        String secondaryId = "merge-secondary-" + suffix;
+        String outsiderId = "merge-outsider-" + suffix;
+        String secondaryUsername = "merge-" + suffix;
+        userAccountRepository.save(new UserAccount(primaryId, "Primary", null, null));
+        userAccountRepository.save(new UserAccount(secondaryId, "Secondary", null, null));
+        userAccountRepository.save(new UserAccount(outsiderId, "Outsider", null, null));
+        localCredentialRepository.save(new LocalCredential(secondaryId, secondaryUsername, "hash"));
+
+        String initiateResponse = mockMvc.perform(post("/api/v1/account/merge/initiate")
+                .with(authentication(auth(primaryId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of(
+                    "primaryUserId", outsiderId, "secondaryIdentifier", secondaryUsername))))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        long requestId = objectMapper.readTree(initiateResponse).path("data").path("mergeRequestId").asLong();
+        AccountMergeRequest request = mergeRequestRepository.findById(requestId).orElseThrow();
+        assertThat(request.getPrimaryUserId()).isEqualTo(primaryId);
+        String spoofedBody = objectMapper.writeValueAsString(java.util.Map.of(
+            "mergeRequestId", requestId, "secondaryUserId", secondaryId, "primaryUserId", primaryId));
+
+        mockMvc.perform(get("/api/v1/account/merge/requests/{id}", requestId))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/account/merge/requests/{id}", requestId)
+                .with(authentication(auth(outsiderId))))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/account/merge/verify")
+                .with(authentication(auth(outsiderId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(spoofedBody))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/account/merge/confirm")
+                .with(authentication(auth(outsiderId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(spoofedBody))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/account/merge/cancel")
+                .with(authentication(auth(outsiderId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(spoofedBody))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/account/merge/verify")
+                .with(authentication(auth(secondaryId)))
+                .contentType(MediaType.APPLICATION_JSON).content(spoofedBody))
+            .andExpect(status().is4xxClientError());
+        assertThat(mergeRequestRepository.findById(requestId).orElseThrow().getStatus())
+            .isEqualTo(AccountMergeRequest.STATUS_PENDING);
     }
 
     @Test
@@ -243,6 +301,86 @@ class AccountMergeFlowIntegrationTest {
             assertThat(userAccountRepository.findById(secondaryId).orElseThrow().getStatus())
                 .isEqualTo(UserStatus.ACTIVE);
             assertThat(credentialOwner).isEqualTo(secondaryId);
+        }
+    }
+
+    @Test
+    void twoApprovedDestinationsCannotBothMergeTheSameAccount() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String firstPrimaryId = "merge-first-" + suffix;
+        String secondPrimaryId = "merge-second-" + suffix;
+        String secondaryId = "merge-secondary-" + suffix;
+        String secondaryUsername = "merge-" + suffix;
+        userAccountRepository.save(new UserAccount(firstPrimaryId, "First", null, null));
+        userAccountRepository.save(new UserAccount(secondPrimaryId, "Second", null, null));
+        userAccountRepository.save(new UserAccount(secondaryId, "Secondary", null, null));
+        localCredentialRepository.save(new LocalCredential(secondaryId, secondaryUsername, "hash"));
+        AccountMergeRequest first = new AccountMergeRequest(
+            firstPrimaryId, secondaryId, null, Instant.now().plusSeconds(1800));
+        first.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        AccountMergeRequest second = new AccountMergeRequest(
+            secondPrimaryId, secondaryId, null, Instant.now().plusSeconds(1800));
+        second.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        long firstId = mergeRequestRepository.save(first).getId();
+        long secondId = mergeRequestRepository.save(second).getId();
+
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch releaseLock = new CountDownLatch(1);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<?> lockHolder = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+                jdbcTemplate.execute("set local lock_timeout = '5s'");
+                jdbcTemplate.queryForObject(
+                    "select id from user_account where id = ? for update", String.class, secondaryId);
+                locked.countDown();
+                try {
+                    releaseLock.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                }
+                return null;
+            }));
+            if (!locked.await(10, TimeUnit.SECONDS)) {
+                releaseLock.countDown();
+                lockHolder.cancel(true);
+                throw new AssertionError("Could not acquire the account row lock");
+            }
+            Future<Boolean> firstConfirm = executor.submit(() -> confirmOrReject(firstPrimaryId, firstId));
+            Future<Boolean> secondConfirm = executor.submit(() -> confirmOrReject(secondPrimaryId, secondId));
+            int waiting = 0;
+            try {
+                for (int attempt = 0; attempt < 50 && waiting < 2; attempt++) {
+                    waiting = jdbcTemplate.queryForObject(
+                        "select count(*) from pg_stat_activity where wait_event_type = 'Lock' "
+                            + "and query like '%user_account%'", Integer.class);
+                    if (waiting < 2) {
+                        Thread.sleep(100);
+                    }
+                }
+                assertThat(waiting).isGreaterThanOrEqualTo(2);
+            } finally {
+                releaseLock.countDown();
+            }
+            lockHolder.get();
+            assertThat(firstConfirm.get()).isNotEqualTo(secondConfirm.get());
+        }
+
+        String winner = localCredentialRepository.findByUsernameIgnoreCase(secondaryUsername)
+            .orElseThrow().getUserId();
+        assertThat(winner).isIn(firstPrimaryId, secondPrimaryId);
+        assertThat(userAccountRepository.findById(secondaryId).orElseThrow().getMergedToUserId())
+            .isEqualTo(winner);
+        assertThat(List.of(firstId, secondId).stream()
+            .filter(id -> AccountMergeRequest.STATUS_COMPLETED.equals(
+                mergeRequestRepository.findById(id).orElseThrow().getStatus())).count()).isEqualTo(1);
+    }
+
+    private boolean confirmOrReject(String primaryUserId, long requestId) {
+        try {
+            mergeService.confirm(primaryUserId, requestId);
+            return true;
+        } catch (com.iflytek.skillhub.auth.exception.AuthFlowException expected) {
+            return false;
         }
     }
 

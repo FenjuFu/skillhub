@@ -163,7 +163,7 @@ class AccountMergeServiceTest {
     }
 
     @Test
-    void confirm_migratesBindingsRolesTokensAndMemberships() throws Exception {
+    void confirm_migratesBindingsRolesAndMembershipsButRevokesSecondaryTokens() throws Exception {
         UserAccount primary = new UserAccount("usr_primary", "primary", "primary@example.com", null);
         UserAccount secondary = new UserAccount("usr_secondary", "secondary", "", null);
         AccountMergeRequest request = request("usr_primary", "usr_secondary", "encoded");
@@ -176,8 +176,8 @@ class AccountMergeServiceTest {
         NamespaceMember secondaryMembership = new NamespaceMember(1L, "usr_secondary", NamespaceRole.ADMIN);
 
         given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
-        given(userAccountRepository.findById("usr_primary")).willReturn(Optional.of(primary));
-        given(userAccountRepository.findById("usr_secondary")).willReturn(Optional.of(secondary));
+        given(userAccountRepository.findLockedById("usr_primary")).willReturn(Optional.of(primary));
+        given(userAccountRepository.findLockedById("usr_secondary")).willReturn(Optional.of(secondary));
         given(mergeRequestRepository.save(any(AccountMergeRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
         given(identityBindingRepository.findByUserId("usr_secondary")).willReturn(List.of(binding));
         given(apiTokenRepository.findByUserId("usr_secondary")).willReturn(List.of(token));
@@ -191,8 +191,9 @@ class AccountMergeServiceTest {
         service.confirm("usr_primary", 7L);
 
         assertThat(binding.getUserId()).isEqualTo("usr_primary");
-        assertThat(token.getUserId()).isEqualTo("usr_primary");
-        assertThat(token.getSubjectId()).isEqualTo("usr_primary");
+        assertThat(token.getUserId()).isEqualTo("usr_secondary");
+        assertThat(token.getSubjectId()).isEqualTo("usr_secondary");
+        assertThat(token.getRevokedAt()).isEqualTo(Instant.parse("2026-03-18T00:00:00Z"));
         assertThat(secondaryMembership.getUserId()).isEqualTo("usr_primary");
         assertThat(secondary.getStatus()).isEqualTo(com.iflytek.skillhub.domain.user.UserStatus.MERGED);
         assertThat(secondary.getMergedToUserId()).isEqualTo("usr_primary");
