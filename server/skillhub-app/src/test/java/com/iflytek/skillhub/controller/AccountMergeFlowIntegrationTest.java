@@ -13,6 +13,7 @@ import com.iflytek.skillhub.auth.local.LocalCredential;
 import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
 import com.iflytek.skillhub.auth.merge.AccountMergeRequest;
 import com.iflytek.skillhub.auth.merge.AccountMergeRequestRepository;
+import com.iflytek.skillhub.auth.merge.AccountMergeService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -22,6 +23,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -64,6 +68,7 @@ class AccountMergeFlowIntegrationTest {
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private LocalCredentialRepository localCredentialRepository;
     @Autowired private AccountMergeRequestRepository mergeRequestRepository;
+    @Autowired private AccountMergeService mergeService;
     @Autowired private JdbcTemplate jdbcTemplate;
     @MockBean private NamespaceMemberRepository namespaceMemberRepository;
 
@@ -147,6 +152,93 @@ class AccountMergeFlowIntegrationTest {
             .isEqualTo(AccountMergeRequest.STATUS_CANCELLED);
         assertThat(mergeRequestRepository.findById(newRequestId).orElseThrow().getStatus())
             .isEqualTo(AccountMergeRequest.STATUS_PENDING);
+    }
+
+    @Test
+    void cancelAndConfirmCannotBothWin() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String primaryId = "merge-primary-" + suffix;
+        String secondaryId = "merge-secondary-" + suffix;
+        String secondaryUsername = "merge-" + suffix;
+        userAccountRepository.save(new UserAccount(primaryId, "Primary", null, null));
+        userAccountRepository.save(new UserAccount(secondaryId, "Secondary", null, null));
+        localCredentialRepository.save(new LocalCredential(secondaryId, secondaryUsername, "hash"));
+        AccountMergeRequest request = new AccountMergeRequest(
+            primaryId, secondaryId, null, Instant.now().plusSeconds(1800));
+        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        long requestId = mergeRequestRepository.save(request).getId();
+
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<Boolean> confirm = executor.submit(() -> {
+                start.await();
+                try {
+                    mergeService.confirm(primaryId, requestId);
+                    return true;
+                } catch (com.iflytek.skillhub.auth.exception.AuthFlowException expected) {
+                    return false;
+                }
+            });
+            Future<Boolean> cancel = executor.submit(() -> {
+                start.await();
+                try {
+                    mergeService.cancel(secondaryId, requestId);
+                    return true;
+                } catch (com.iflytek.skillhub.auth.exception.AuthFlowException expected) {
+                    return false;
+                }
+            });
+            start.countDown();
+            assertThat(confirm.get()).isNotEqualTo(cancel.get());
+        }
+
+        String finalStatus = mergeRequestRepository.findById(requestId).orElseThrow().getStatus();
+        String credentialOwner = localCredentialRepository.findByUsernameIgnoreCase(secondaryUsername)
+            .orElseThrow().getUserId();
+        if (AccountMergeRequest.STATUS_COMPLETED.equals(finalStatus)) {
+            assertThat(userAccountRepository.findById(secondaryId).orElseThrow().getStatus())
+                .isEqualTo(UserStatus.MERGED);
+            assertThat(credentialOwner).isEqualTo(primaryId);
+        } else {
+            assertThat(finalStatus).isEqualTo(AccountMergeRequest.STATUS_CANCELLED);
+            assertThat(userAccountRepository.findById(secondaryId).orElseThrow().getStatus())
+                .isEqualTo(UserStatus.ACTIVE);
+            assertThat(credentialOwner).isEqualTo(secondaryId);
+        }
+    }
+
+    @Test
+    void secondaryCancellationAfterApprovalBlocksConfirmation() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String primaryId = "merge-primary-" + suffix;
+        String secondaryId = "merge-secondary-" + suffix;
+        String secondaryUsername = "merge-" + suffix;
+        userAccountRepository.save(new UserAccount(primaryId, "Primary", null, null));
+        userAccountRepository.save(new UserAccount(secondaryId, "Secondary", null, null));
+        localCredentialRepository.save(new LocalCredential(secondaryId, secondaryUsername, "hash"));
+        AccountMergeRequest request = mergeRequestRepository.save(new AccountMergeRequest(
+            primaryId, secondaryId, null, Instant.now().plusSeconds(1800)));
+        String body = objectMapper.writeValueAsString(java.util.Map.of("mergeRequestId", request.getId()));
+
+        mockMvc.perform(post("/api/v1/account/merge/verify")
+                .with(authentication(auth(secondaryId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/account/merge/cancel")
+                .with(authentication(auth(secondaryId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/account/merge/confirm")
+                .with(authentication(auth(primaryId))).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+
+        assertThat(mergeRequestRepository.findById(request.getId()).orElseThrow().getStatus())
+            .isEqualTo(AccountMergeRequest.STATUS_CANCELLED);
+        assertThat(userAccountRepository.findById(secondaryId).orElseThrow().getStatus())
+            .isEqualTo(UserStatus.ACTIVE);
+        assertThat(localCredentialRepository.findByUsernameIgnoreCase(secondaryUsername).orElseThrow().getUserId())
+            .isEqualTo(secondaryId);
     }
 
     private static UsernamePasswordAuthenticationToken auth(String userId) {
