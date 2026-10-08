@@ -84,7 +84,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+          image: docker.io/pgsty/silo:RELEASE.2026-09-16T00-00-00Z
           args:
             - server
             - /data
