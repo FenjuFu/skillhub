@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -38,6 +39,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -70,6 +73,7 @@ class AccountMergeFlowIntegrationTest {
     @Autowired private AccountMergeRequestRepository mergeRequestRepository;
     @Autowired private AccountMergeService mergeService;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private PlatformTransactionManager transactionManager;
     @MockBean private NamespaceMemberRepository namespaceMemberRepository;
 
     @Test
@@ -168,8 +172,23 @@ class AccountMergeFlowIntegrationTest {
         request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
         long requestId = mergeRequestRepository.save(request).getId();
 
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch releaseLock = new CountDownLatch(1);
         CountDownLatch start = new CountDownLatch(1);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<?> lockHolder = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+                jdbcTemplate.queryForObject(
+                    "select id from account_merge_request where id = ? for update", Long.class, requestId);
+                locked.countDown();
+                try {
+                    releaseLock.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                }
+                return null;
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
             Future<Boolean> confirm = executor.submit(() -> {
                 start.await();
                 try {
@@ -189,6 +208,21 @@ class AccountMergeFlowIntegrationTest {
                 }
             });
             start.countDown();
+            int waiting = 0;
+            try {
+                for (int attempt = 0; attempt < 50 && waiting < 2; attempt++) {
+                    waiting = jdbcTemplate.queryForObject(
+                        "select count(*) from pg_stat_activity where wait_event_type = 'Lock' "
+                            + "and query like '%account_merge_request%'", Integer.class);
+                    if (waiting < 2) {
+                        Thread.sleep(100);
+                    }
+                }
+                assertThat(waiting).isGreaterThanOrEqualTo(2);
+            } finally {
+                releaseLock.countDown();
+            }
+            lockHolder.get();
             assertThat(confirm.get()).isNotEqualTo(cancel.get());
         }
 
