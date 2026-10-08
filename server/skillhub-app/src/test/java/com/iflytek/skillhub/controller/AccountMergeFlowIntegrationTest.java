@@ -177,6 +177,7 @@ class AccountMergeFlowIntegrationTest {
         CountDownLatch start = new CountDownLatch(1);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<?> lockHolder = executor.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+                jdbcTemplate.execute("set local lock_timeout = '5s'");
                 jdbcTemplate.queryForObject(
                     "select id from account_merge_request where id = ? for update", Long.class, requestId);
                 locked.countDown();
@@ -188,7 +189,11 @@ class AccountMergeFlowIntegrationTest {
                 }
                 return null;
             }));
-            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+            if (!locked.await(10, TimeUnit.SECONDS)) {
+                releaseLock.countDown();
+                lockHolder.cancel(true);
+                throw new AssertionError("Could not acquire the fixture row lock");
+            }
             Future<Boolean> confirm = executor.submit(() -> {
                 start.await();
                 try {
